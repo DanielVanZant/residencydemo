@@ -1,4 +1,5 @@
 config.js
+server/config.js
 .env
 *.env
 .DS_Store

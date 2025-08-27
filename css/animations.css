@@ -1,0 +1,89 @@
+/* Animations and Responsive Design */
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    :root {
+        --text-3xl: 2rem;
+        --text-xl: 1.25rem;
+        --text-lg: 1rem;
+    }
+
+    body {
+        padding: var(--space-sm);
+    }
+    
+    .update-form {
+        padding: var(--space-md);
+    }
+    
+    .date-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .date-input {
+        width: 100%;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .question-section {
+        margin-bottom: var(--space-md);
+    }
+
+    .bullets-header-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+
+    .edit-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

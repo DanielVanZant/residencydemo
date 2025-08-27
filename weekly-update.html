@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Update Dashboard</title>
-    <script src="config.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <script src="server/config.js"></script>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/form.css">
+    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <!-- Editor.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
 </head>
 <body>
     <!-- Hero Section -->
@@ -74,6 +80,7 @@
                     <button type="submit" class="btn btn-primary">Save Update</button>
                     <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
                     <button type="button" class="btn btn-primary" onclick="extractBullets()">Extract Bullet Points</button>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="fillTestData()">Fill Test Data</button>
                 </div>
             </form>
 
@@ -81,12 +88,49 @@
             <div class="error-message" id="errorMessage"></div>
 
             <div class="bullets-section" id="bulletsSection">
-                <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
-                <div id="bulletsContainer"></div>
+                <div class="bullets-header-controls">
+                    <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
+                    <div class="edit-controls">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="clearBullets()">Clear All</button>
+                    </div>
+                </div>
+                
+                <div id="editorjs" class="roam-editor"></div>
+                
+                <div class="editor-help">
+                    <strong>Tips:</strong> Click anywhere to edit • Enter for new bullet • Tab to indent • Shift+Tab to outdent • Drag to reorder
+                </div>
             </div>
         </div>
     </section>
 
     <script src="app.js"></script>
+    <script>
+        // Debug: Check what's loaded after page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded. Checking for Editor.js tools...');
+            console.log('window.EditorJS:', typeof window.EditorJS);
+            console.log('window.List:', typeof window.List);
+            console.log('window.EditorjsList:', typeof window.EditorjsList);
+            
+            // Check if List is available on window after a delay
+            setTimeout(() => {
+                console.log('After delay - window.List:', typeof window.List);
+                
+                // Check all window properties that might be the List tool
+                const possibleNames = Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('list') || 
+                    k.toLowerCase().includes('editorjs')
+                );
+                console.log('Possible List tool names:', possibleNames);
+                
+                // Test Editor.js initialization
+                if (window.EditorjsList && window.EditorJS) {
+                    console.log('Both EditorJS and EditorjsList loaded successfully');
+                    console.log('EditorjsList:', window.EditorjsList);
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
