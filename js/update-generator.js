@@ -1,97 +1,113 @@
-// Update generator module for privacy-filtered content
+// Update generator module for checkbox-based publishing
 class UpdateGenerator {
     constructor() {
-        this.privacyLevels = {
-            'private': ['private', 'residency', 'public'],
-            'residency': ['residency', 'public'],
-            'public': ['public']
-        };
+        // Store editor instances for access by save functionality
+        this.updateEditors = {};
     }
 
-    // Extract bullet content recursively, filtering by privacy level
-    extractBulletContent(items, targetLevel, parentPrivacy = 'public') {
-        const allowedPrivacies = this.privacyLevels[targetLevel];
-        const filteredContent = [];
+    // Generate both published and internal updates from checkbox data
+    async generateBothUpdates(bulletData) {
+        const updates = {};
+        
+        try {
+            console.log('Generating published update...');
+            updates.published = await this.generateFormattedUpdate(bulletData, 'published');
+            console.log('Published update generated successfully');
+        } catch (error) {
+            console.error('Failed to generate published update:', error);
+            updates.published = {
+                type: 'text',
+                text: 'Unable to generate published update due to API error. Please try again.'
+            };
+        }
+        
+        try {
+            console.log('Generating internal notes...');
+            updates.internal = await this.generateFormattedUpdate(bulletData, 'internal');
+            console.log('Internal notes generated successfully');
+        } catch (error) {
+            console.error('Failed to generate internal notes:', error);
+            updates.internal = {
+                type: 'text',
+                text: 'Unable to generate internal notes due to API error. Please try again.'
+            };
+        }
+        
+        return updates;
+    }
 
-        items.forEach(item => {
-            // Determine effective privacy (item's own or inherited from parent)
-            const effectivePrivacy = (item.meta && item.meta.privacy) ? item.meta.privacy : parentPrivacy;
-            
-            // Include item if its privacy level is allowed for this target level
-            if (allowedPrivacies.includes(effectivePrivacy)) {
-                const filteredItem = {
-                    content: item.content,
-                    meta: { privacy: effectivePrivacy },
-                    items: []
-                };
+    // API call with retry logic for overload errors
+    async callAPIWithRetry(updateType, requestData, maxRetries = 3, baseDelay = 3000) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`Attempting to generate ${updateType} update (attempt ${attempt}/${maxRetries})`);
+                
+                // Add timeout to prevent hanging requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+                
+                const response = await fetch(this.getEndpoint(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_CONFIG?.ANTHROPIC_API_KEY || ''
+                    },
+                    body: JSON.stringify(requestData),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
 
-                // Recursively process children with current privacy as parent
-                if (item.items && item.items.length > 0) {
-                    filteredItem.items = this.extractBulletContent(item.items, targetLevel, effectivePrivacy);
+                // If successful or non-retryable error, return immediately
+                if (response.ok || (response.status !== 429 && response.status !== 503 && response.status !== 500)) {
+                    return response;
                 }
 
-                filteredContent.push(filteredItem);
+                // Check if this is an overload/rate limit error
+                const errorData = await response.json().catch(() => ({}));
+                const isOverloadError = errorData.error?.includes('overloaded') || 
+                                      errorData.error?.includes('Overloaded') ||
+                                      response.status === 429 || 
+                                      response.status === 503;
+
+                if (!isOverloadError || attempt === maxRetries) {
+                    // Not a retryable error or final attempt, return the response
+                    return response;
+                }
+
+                // Wait before retrying (exponential backoff)
+                const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+                console.log(`${updateType} update overloaded, retrying in ${Math.round(delay)}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                
+            } catch (error) {
+                console.error(`Network error on attempt ${attempt} for ${updateType}:`, error);
+                
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+                
+                // Wait before retrying network errors too
+                const delay = baseDelay * Math.pow(2, attempt - 1);
+                console.log(`Network error for ${updateType}, retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
-        });
-
-        return filteredContent;
-    }
-
-    // Convert filtered bullet data to formatted text
-    bulletDataToText(items, indent = 0) {
-        let text = '';
-        const indentStr = '  '.repeat(indent);
-
-        items.forEach(item => {
-            text += `${indentStr}- ${item.content}\n`;
-            
-            if (item.items && item.items.length > 0) {
-                text += this.bulletDataToText(item.items, indent + 1);
-            }
-        });
-
-        return text;
-    }
-
-    // Generate formatted update for specific privacy level
-    async generateFormattedUpdate(bulletData, privacyLevel) {
-        // Filter content based on privacy level
-        const filteredContent = this.extractBulletContent(bulletData.data.items, privacyLevel);
-        
-        if (filteredContent.length === 0) {
-            return `No content available at ${privacyLevel} level.`;
         }
+    }
 
-        // Convert filtered content to text format
-        const contentText = this.bulletDataToText(filteredContent);
-        
-        // Create LLM prompt for formatting
-        const systemPrompt = this.getFormattingPrompt(privacyLevel);
-        const userPrompt = `Transform the following bullet points into a well-formatted, narrative weekly update for ${privacyLevel} sharing:
 
-${contentText}
-
-Create a flowing, professional update that groups related items naturally and uses appropriate tone for ${privacyLevel} audience.`;
-
+    // Generate formatted update for specific type (published or internal)
+    async generateFormattedUpdate(bulletData, updateType) {
         try {
-            // Call LLM to format the filtered content
-            const response = await fetch(this.getEndpoint(), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': API_CONFIG?.ANTHROPIC_API_KEY || ''
-                },
-                body: JSON.stringify({
-                    formData: { filteredContent: contentText },
-                    privacyLevel: privacyLevel,
-                    systemPrompt: systemPrompt,
-                    userPrompt: userPrompt
-                })
+            // Call API to format the content
+            const response = await this.callAPIWithRetry(updateType, {
+                bulletData: bulletData,
+                updateType: updateType
             });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Failed to generate ${privacyLevel} update: ${response.status}`);
+                throw new Error(errorData.error || `Failed to generate ${updateType} update: ${response.status}`);
             }
 
             const data = await response.json();
@@ -107,27 +123,15 @@ Create a flowing, professional update that groups related items naturally and us
             
             return {
                 type: 'text',
-                text: data.formattedUpdate || `Error generating ${privacyLevel} update.`
+                text: data.formattedUpdate || `Error generating ${updateType} update.`
             };
             
         } catch (error) {
-            console.error(`Error generating ${privacyLevel} update:`, error);
-            return `Error generating ${privacyLevel} update: ${error.message}`;
+            console.error(`Error generating ${updateType} update:`, error);
+            return `Error generating ${updateType} update: ${error.message}`;
         }
     }
 
-    // Get appropriate formatting prompt for privacy level
-    getFormattingPrompt(privacyLevel) {
-        const prompts = {
-            'private': `You are creating a personal weekly update for private reflection. Write in a conversational, introspective tone that captures both achievements and honest self-reflection. Include personal struggles, detailed thoughts, and vulnerable insights. This is for personal use only.`,
-            
-            'residency': `You are creating a weekly update for trusted colleagues within a residency program. Write in a professional but honest tone that encourages peer discussion and feedback. Include challenges, learning processes, and reflections that would benefit from group input. This is for trusted peers who understand the context.`,
-            
-            'public': `You are creating a polished weekly update for public sharing (LinkedIn, blog, etc.). Write in a professional, inspiring tone that highlights achievements and learnings that could help others. Focus on completed work, insights gained, and positive outcomes. This should be polished and ready for external audiences.`
-        };
-
-        return prompts[privacyLevel] || prompts['public'];
-    }
 
     // Get API endpoint
     getEndpoint() {
@@ -136,22 +140,6 @@ Create a flowing, professional update that groups related items naturally and us
             : 'http://localhost:3000/api/generate-formatted-update';
     }
 
-    // Generate all three privacy level updates
-    async generateAllUpdates(bulletData) {
-        const updates = {};
-        
-        for (const level of ['public', 'residency', 'private']) {
-            try {
-                console.log(`Generating ${level} update...`);
-                updates[level] = await this.generateFormattedUpdate(bulletData, level);
-            } catch (error) {
-                console.error(`Failed to generate ${level} update:`, error);
-                updates[level] = `Failed to generate ${level} update.`;
-            }
-        }
-        
-        return updates;
-    }
 
     // Display updates in UI
     displayUpdates(updates) {
@@ -169,31 +157,30 @@ Create a flowing, professional update that groups related items naturally and us
         container.innerHTML = '';
 
         // Create update sections
-        const levels = [
-            { key: 'public', title: 'Public Update', icon: '🌍', description: 'Ready for LinkedIn, blog posts, or external sharing' },
-            { key: 'residency', title: 'Within Residency', icon: '👥', description: 'For trusted colleagues and peer discussion' },
-            { key: 'private', title: 'Private Update', icon: '🔒', description: 'Personal reflection with full context' }
+        const sections = [
+            { key: 'published', title: 'Published Update', icon: '📝', description: 'Ready for sharing with colleagues, managers, or external audiences' },
+            { key: 'internal', title: 'Internal Notes', icon: '📋', description: 'Private notes and reflections not included in the published update' }
         ];
 
-        levels.forEach((level, index) => {
-            const section = document.createElement('div');
-            section.className = 'formatted-update-section';
+        sections.forEach((section, index) => {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'formatted-update-section';
             
-            const updateData = updates[level.key];
-            const editorId = `editor-${level.key}`;
+            const updateData = updates[section.key];
+            const editorId = `editor-${section.key}`;
             
-            section.innerHTML = `
+            sectionDiv.innerHTML = `
                 <div class="update-header">
-                    <h3><span class="update-icon">${level.icon}</span> ${level.title}</h3>
-                    <p class="update-description">${level.description}</p>
+                    <h3><span class="update-icon">${section.icon}</span> ${section.title}</h3>
+                    <p class="update-description">${section.description}</p>
                 </div>
                 <div id="${editorId}" class="update-editor"></div>
             `;
-            container.appendChild(section);
+            container.appendChild(sectionDiv);
             
             // Initialize Editor.js for this update
             setTimeout(() => {
-                this.initializeUpdateEditor(editorId, updateData, level.key);
+                this.initializeUpdateEditor(editorId, updateData, section.key);
             }, 100 * index); // Stagger initialization
         });
 
@@ -202,8 +189,8 @@ Create a flowing, professional update that groups related items naturally and us
     }
 
     // Initialize Editor.js instance for a specific update
-    async initializeUpdateEditor(editorId, updateData, level) {
-        console.log(`Initializing editor for ${level}:`, updateData);
+    async initializeUpdateEditor(editorId, updateData, updateType) {
+        console.log(`Initializing editor for ${updateType}:`, updateData);
         
         try {
             // Check if Editor.js and tools are available
@@ -219,6 +206,14 @@ Create a flowing, professional update that groups related items naturally and us
                     class: window.EditorjsList,
                     inlineToolbar: true
                 };
+                
+                // Add checklist tool for task management
+                if (window.EditorjsChecklist) {
+                    tools.checklist = {
+                        class: window.EditorjsChecklist,
+                        inlineToolbar: true
+                    };
+                }
             }
             
             if (window.Header) {
@@ -236,56 +231,61 @@ Create a flowing, professional update that groups related items naturally and us
             
             // Handle different update data formats
             if (typeof updateData === 'object' && updateData.type === 'editorjs' && updateData.blocks) {
-                console.log(`Using structured Editor.js blocks for ${level}`);
+                console.log(`Using structured Editor.js blocks for ${updateType}`);
                 editorData = updateData.blocks;
             } else {
                 // Convert text to simple paragraph blocks
                 const text = typeof updateData === 'string' ? updateData : updateData?.text || 'No content available.';
-                console.log(`Converting text to blocks for ${level}`);
+                console.log(`Converting text to blocks for ${updateType}`);
                 
                 // Try to parse text as JSON first (in case LLM returned raw JSON as text)
                 try {
                     if (text.trim().startsWith('{') && text.includes('"blocks"')) {
-                        console.log(`Attempting to parse raw JSON text for ${level}`);
+                        console.log(`Attempting to parse raw JSON text for ${updateType}`);
                         const parsed = JSON.parse(text.trim());
                         if (parsed.blocks && Array.isArray(parsed.blocks)) {
-                            console.log(`Successfully parsed JSON from text for ${level}`);
+                            console.log(`Successfully parsed JSON from text for ${updateType}`);
                             editorData = parsed;
                         } else {
                             throw new Error('Invalid JSON structure');
                         }
                     }
                 } catch (jsonParseError) {
-                    console.log(`Raw JSON parsing failed for ${level}, continuing with text conversion`);
+                    console.log(`Raw JSON parsing failed for ${updateType}, continuing with text conversion`);
                 }
                 
                 // Split text into paragraphs and create blocks
-                const paragraphs = text.split('\n\n').filter(p => p.trim());
-                editorData.blocks = paragraphs.map(paragraph => ({
-                    type: 'paragraph',
-                    data: {
-                        text: paragraph.trim()
-                    }
-                }));
+                if (!editorData.blocks || editorData.blocks.length === 0) {
+                    const paragraphs = text.split('\n\n').filter(p => p.trim());
+                    editorData.blocks = paragraphs.map(paragraph => ({
+                        type: 'paragraph',
+                        data: {
+                            text: paragraph.trim()
+                        }
+                    }));
+                }
             }
             
-            console.log(`Creating editor for ${level} with data:`, editorData);
+            console.log(`Creating editor for ${updateType} with data:`, editorData);
             
             const editor = new EditorJS({
                 holder: editorId,
                 tools: tools,
                 data: editorData,
-                placeholder: `Edit your ${level} update...`,
+                placeholder: `Edit your ${updateType} update...`,
                 minHeight: 100,
                 onChange: (api, event) => {
-                    console.log(`${level} update modified`);
+                    console.log(`${updateType} update modified`);
                 }
             });
             
-            console.log(`Editor initialized for ${level}`);
+            // Store editor instance for save functionality
+            this.updateEditors[updateType] = editor;
+            
+            console.log(`Editor initialized for ${updateType}`);
             
         } catch (error) {
-            console.error(`Error initializing editor for ${level}:`, error);
+            console.error(`Error initializing editor for ${updateType}:`, error);
             // Fallback to plain text
             const container = document.getElementById(editorId);
             const text = typeof updateData === 'string' ? updateData : updateData?.text || 'No content available.';
@@ -293,21 +293,6 @@ Create a flowing, professional update that groups related items naturally and us
         }
     }
 
-    // Copy update text to clipboard
-    copyUpdate(level) {
-        const updateContent = document.querySelector(`[data-level="${level}"] .update-content`);
-        if (updateContent) {
-            navigator.clipboard.writeText(updateContent.textContent).then(() => {
-                // Show temporary success feedback
-                const button = document.querySelector(`[onclick="copyUpdate('${level}')"]`);
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = originalText;
-                }, 2000);
-            });
-        }
-    }
 }
 
 

@@ -28,9 +28,18 @@ class EditorUtils {
                 class: ListTool,
                 inlineToolbar: true,
                 config: {
-                    defaultStyle: 'unordered',
+                    defaultStyle: 'checklist',
                     maxLevel: 5 // Allow deep nesting like Roam
                 }
+            };
+        }
+        
+        // Add Checklist tool if available (try multiple possible names)
+        const ChecklistTool = window.Checklist || window.EditorjsChecklist || window.CheckList;
+        if (ChecklistTool) {
+            tools.checklist = {
+                class: ChecklistTool,
+                inlineToolbar: true
             };
         }
         
@@ -80,27 +89,15 @@ class EditorUtils {
             let blocks = [];
             
             if (typeof markdownOrHierarchy === 'object' && markdownOrHierarchy.type === 'list' && markdownOrHierarchy.data) {
-                console.log('Processing as Editor.js block with privacy info');
+                console.log('Processing as Editor.js checklist block');
                 console.log('RECEIVED DATA STRUCTURE:', JSON.stringify(markdownOrHierarchy, null, 2));
-                
-                // Check if privacy data exists
-                const firstItem = markdownOrHierarchy.data.items[0];
-                console.log('First item has meta?', firstItem?.meta);
-                console.log('First item privacy?', firstItem?.meta?.privacy);
-                
-                // Store privacy data separately
-                const privacyData = privacyManager.extractPrivacyData(markdownOrHierarchy.data.items);
-                console.log('Extracted privacy data:', privacyData);
-                privacyManager.setPrivacyData(privacyData);
                 blocks = [markdownOrHierarchy]; // Already in correct format
             } else if (typeof markdownOrHierarchy === 'string') {
                 console.log('Processing as markdown:', markdownOrHierarchy);
                 blocks = this.parseMarkdownToBlocks(markdownOrHierarchy);
-                privacyManager.setPrivacyData(null); // No privacy data in markdown
             } else {
                 console.log('Processing as hierarchy:', markdownOrHierarchy);
                 blocks = this.convertHierarchyToBlocks(markdownOrHierarchy);
-                privacyManager.setPrivacyData(null);
             }
             
             console.log('Generated blocks:', JSON.stringify(blocks, null, 2));
@@ -113,16 +110,12 @@ class EditorUtils {
                 blocks: blocks
             });
             
-            // Apply privacy data attributes after rendering
+            // Generate formatted updates after rendering
             setTimeout(() => {
-                privacyManager.applyPrivacyFromStoredData();
-                privacyManager.addPrivacyLegend();
-                privacyManager.addPrivacyClickHandlers();
-                
-                // Generate formatted updates after bullets are displayed
                 console.log('About to generate formatted updates with data:', markdownOrHierarchy);
+                console.log('Editor rendered, calling generateFormattedUpdates...');
                 this.generateFormattedUpdates(markdownOrHierarchy);
-            }, 500); // Increased timeout to ensure Editor.js has fully rendered
+            }, 500); // Wait for Editor.js to fully render
             
         } else {
             console.log('List tool not available, using fallback contenteditable');
@@ -155,11 +148,15 @@ class EditorUtils {
 
     // Generate formatted updates after bullets are displayed
     async generateFormattedUpdates(bulletData) {
-        // Only generate if we have structured data with privacy information
+        console.log('generateFormattedUpdates called with:', bulletData);
+        
+        // Only generate if we have structured data
         if (typeof bulletData !== 'object' || !bulletData.type || !bulletData.data) {
             console.log('No structured bullet data available for formatted updates');
             return;
         }
+        
+        console.log('Bullet data validation passed, proceeding with update generation...');
 
         try {
             // Show the formatted updates section first
@@ -169,19 +166,29 @@ class EditorUtils {
             this.showUpdatesLoading(true);
             this.hideUpdatesError();
             
+            // Hide submit button while generating
+            this.showSubmitSection(false);
+            
             console.log('Generating formatted updates...');
+            console.log('Looking for updateGenerator...');
             const updateGenerator = window.updateGenerator;
             
             if (!updateGenerator) {
+                console.error('UpdateGenerator not available!');
                 throw new Error('UpdateGenerator not available');
             }
             
-            const updates = await updateGenerator.generateAllUpdates(bulletData);
+            console.log('UpdateGenerator found, calling generateBothUpdates...');
+            
+            const updates = await updateGenerator.generateBothUpdates(bulletData);
             console.log('All formatted updates generated');
             
             // Display the updates
             updateGenerator.displayUpdates(updates);
             this.showUpdatesLoading(false);
+            
+            // Show submit button now that everything is ready
+            this.showSubmitSection(true);
             
         } catch (error) {
             console.error('Error generating formatted updates:', error);
@@ -214,6 +221,42 @@ class EditorUtils {
         this.showUpdatesError(false);
     }
 
+    // Show/hide submit section
+    showSubmitSection(show) {
+        const submitEl = document.getElementById('submitSection');
+        if (submitEl) {
+            console.log(`${show ? 'Showing' : 'Hiding'} submit section`);
+            submitEl.classList.toggle('active', show);
+        } else {
+            console.error('Submit section element not found');
+        }
+    }
+
+    // Convert checklist items to individual checklist blocks
+    convertChecklistToBlocks(items, blocks = []) {
+        items.forEach(item => {
+            // Create a checklist block for each item
+            blocks.push({
+                type: 'checklist',
+                data: {
+                    items: [
+                        {
+                            text: item.content,
+                            checked: item.checked || false
+                        }
+                    ]
+                }
+            });
+            
+            // Handle nested items
+            if (item.items && item.items.length > 0) {
+                this.convertChecklistToBlocks(item.items, blocks);
+            }
+        });
+        
+        return blocks;
+    }
+    
     parseMarkdownToBlocks(markdown) {
         if (!markdown || markdown.trim() === '') {
             return [];

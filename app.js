@@ -54,13 +54,11 @@ function clearForm() {
 }
 
 // Initialize modules
-const privacyManager = new PrivacyManager();
 const editorUtils = new EditorUtils();
 const apiClient = new ApiClient();
 const updateGenerator = new UpdateGenerator();
 
 // Make available globally for button callbacks
-window.privacyManager = privacyManager;
 window.editorUtils = editorUtils;
 window.updateGenerator = updateGenerator;
 
@@ -103,7 +101,7 @@ async function extractBullets() {
         const bullets = await apiClient.callClaudeAPI(formData);
         console.log('API response received:', bullets);
         
-        await editorUtils.displayBullets(bullets, privacyManager);
+        await editorUtils.displayBullets(bullets);
         showLoading(false);
         console.log('Bullets displayed successfully');
     } catch (error) {
@@ -174,6 +172,9 @@ async function regenerateUpdates() {
         editorUtils.showUpdatesLoading(true);
         editorUtils.hideUpdatesError();
         
+        // Hide submit button while regenerating
+        editorUtils.showSubmitSection(false);
+        
         console.log('Getting current bullet point data...');
         const savedData = await bulletEditor.save();
         console.log('Current bullet data:', savedData);
@@ -193,9 +194,9 @@ async function regenerateUpdates() {
             }
         };
         
-        console.log('Regenerating formatted updates with current bullet data...');
-        const updates = await updateGenerator.generateAllUpdates(bulletData);
-        console.log('All formatted updates regenerated');
+        console.log('Generating both published and internal updates with current bullet data...');
+        const updates = await updateGenerator.generateBothUpdates(bulletData);
+        console.log('Both updates generated successfully');
         
         // Clear existing updates and display new ones
         const updatesContainer = document.getElementById('formattedUpdates');
@@ -205,6 +206,9 @@ async function regenerateUpdates() {
         
         updateGenerator.displayUpdates(updates);
         editorUtils.showUpdatesLoading(false);
+        
+        // Show submit button since updates are ready
+        editorUtils.showSubmitSection(true);
         
         console.log('Updates regenerated successfully');
         
@@ -216,7 +220,129 @@ async function regenerateUpdates() {
     }
 }
 
+// Save changes to database
+async function saveChanges() {
+    console.log('Save changes called...');
+    
+    try {
+        // Get username and week date
+        const username = document.getElementById('username').value.trim();
+        const weekDate = document.getElementById('weekDate').value;
+        
+        if (!username) {
+            showError('Please enter a username before saving');
+            return;
+        }
+        
+        if (!weekDate) {
+            showError('Please select a week date before saving');
+            return;
+        }
+        
+        // Get current bullet points from Editor.js
+        const bulletEditor = window.bulletEditor;
+        if (!bulletEditor) {
+            showError('No bullet points available to save. Please extract bullet points first.');
+            return;
+        }
+        
+        console.log('Getting current bullet point data...');
+        const savedData = await bulletEditor.save();
+        console.log('Bullet point data:', savedData);
+        
+        // Find the list block
+        const listBlock = savedData.blocks.find(block => block.type === 'list');
+        if (!listBlock || !listBlock.data || !listBlock.data.items || listBlock.data.items.length === 0) {
+            showError('No bullet points found to save. Please extract bullet points first.');
+            return;
+        }
+        
+        // Get formatted updates from both update editors
+        const formattedUpdates = {};
+        const updateEditors = window.updateGenerator?.updateEditors || {};
+        
+        console.log('Available update editors:', Object.keys(updateEditors));
+        
+        for (const [updateType, editor] of Object.entries(updateEditors)) {
+            if (editor && editor.save) {
+                try {
+                    const updateData = await editor.save();
+                    formattedUpdates[updateType] = updateData;
+                    console.log(`Saved ${updateType} update data`);
+                } catch (error) {
+                    console.error(`Error saving ${updateType} update:`, error);
+                    // Continue with other updates even if one fails
+                }
+            }
+        }
+        
+        console.log('Collected formatted updates:', Object.keys(formattedUpdates));
+        
+        // Prepare data for API
+        const saveData = {
+            username: username,
+            weekDate: weekDate,
+            bulletPointsJson: JSON.stringify(listBlock.data),
+            formattedUpdates: formattedUpdates
+        };
+        
+        console.log('Saving to database...');
+        showLoading(true);
+        hideError();
+        
+        // Call save API
+        const response = await fetch('/api/save-weekly-update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(saveData)
+        });
+        
+        showLoading(false);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Save failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Save successful:', result);
+        
+        // Show success feedback
+        showSuccessMessage('Weekly update saved successfully!');
+        
+    } catch (error) {
+        console.error('Error saving changes:', error);
+        showLoading(false);
+        showError('Failed to save changes: ' + error.message);
+    }
+}
+
+// Show success message near the submit button
+function showSuccessMessage(message) {
+    // Create or reuse success message element in submit section
+    let successDiv = document.getElementById('submitSuccessMessage');
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.id = 'submitSuccessMessage';
+        successDiv.className = 'submit-success-message';
+        
+        // Insert in the submit container, after the button
+        const submitContainer = document.querySelector('.submit-container');
+        const submitButton = submitContainer.querySelector('button');
+        submitContainer.insertBefore(successDiv, submitButton.nextSibling);
+    }
+    
+    successDiv.textContent = message;
+    successDiv.classList.add('active');
+    
+    // Auto-hide after 5 seconds (longer for submit confirmation)
+    setTimeout(() => {
+        successDiv.classList.remove('active');
+    }, 5000);
+}
+
 window.fillTestData = fillTestData;
-window.togglePrivacyMode = () => privacyManager.togglePrivacyMode();
-window.applyPrivacyAttributes = () => privacyManager.applyPrivacyFromStoredData();
 window.regenerateUpdates = regenerateUpdates;
+window.saveChanges = saveChanges;

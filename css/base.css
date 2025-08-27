@@ -116,3 +116,58 @@ body {
 .header p .emphasis {
     font-style: italic;
 }
+
+/* Final Submit Section */
+.submit-section {
+    background: var(--bg-primary);
+    padding: var(--space-2xl) 0;
+    border-top: 2px solid var(--accent-primary);
+    margin-top: var(--space-xl);
+    display: none;
+    animation: fadeIn var(--transition-slow);
+}
+
+.submit-section.active {
+    display: block;
+}
+
+.submit-container {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+    background: var(--bg-section);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-large {
+    font-size: var(--text-lg);
+    padding: var(--space-lg) var(--space-2xl);
+    font-weight: var(--font-semibold);
+    min-width: 250px;
+}
+
+.submit-help {
+    margin-top: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+.submit-success-message {
+    background: var(--success-color);
+    color: white;
+    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-md);
+    text-align: center;
+    font-weight: var(--font-medium);
+    display: none;
+    animation: slideDown var(--transition-medium);
+    box-shadow: var(--shadow-sm);
+}
+
+.submit-success-message.active {
+    display: block;
+}

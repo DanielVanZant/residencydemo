@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/form.css">
     <link rel="stylesheet" href="css/editor.css">
-    <link rel="stylesheet" href="css/privacy.css">
     <link rel="stylesheet" href="css/updates.css">
     <link rel="stylesheet" href="css/animations.css">
     <!-- Editor.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
 </head>
 <body>
@@ -32,8 +32,14 @@
         <div class="container">
             <div class="update-form">
             <div class="date-header">
-                <h2><span class="italic">Week</span> of:</h2>
-                <input type="date" class="date-input" id="weekDate">
+                <div class="date-section">
+                    <h2><span class="italic">Week</span> of:</h2>
+                    <input type="date" class="date-input" id="weekDate">
+                </div>
+                <div class="user-section">
+                    <label for="username">User:</label>
+                    <input type="text" class="username-input" id="username" placeholder="Enter your username" value="demo-user">
+                </div>
             </div>
 
             <form id="updateForm">
@@ -91,7 +97,6 @@
                 <div class="bullets-header-controls">
                     <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
                     <div class="edit-controls">
-                        <button type="button" class="btn btn-secondary btn-small" onclick="togglePrivacyMode()">Hide Privacy Indicators</button>
                     </div>
                 </div>
                 
@@ -100,7 +105,7 @@
                 <div class="editor-help">
                     <strong>Tips:</strong> Click anywhere to edit • Enter for new bullet • Tab to indent • Shift+Tab to outdent • Drag to reorder
                     <br>
-                    <small>Right-click bullet points to change privacy level • <a href="#" onclick="applyPrivacyAttributes(); return false;">Refresh Privacy Indicators</a></small>
+                    <small>Check/uncheck items to control what gets included in your published update</small>
                 </div>
             </div>
         </div>
@@ -113,7 +118,7 @@
                 <div class="updates-header-controls">
                     <div class="updates-header-text">
                         <h2 class="updates-title"><span class="italic">formatted</span> updates</h2>
-                        <p class="updates-subtitle">Privacy-filtered versions ready for different audiences</p>
+                        <p class="updates-subtitle">Published update and internal notes based on your selections</p>
                     </div>
                     <div class="updates-controls">
                         <button type="button" class="btn btn-primary btn-small" onclick="regenerateUpdates()">Regenerate Updates</button>
@@ -136,8 +141,17 @@
         </div>
     </section>
 
+    <!-- Final Submit Section -->
+    <section class="submit-section" id="submitSection">
+        <div class="container">
+            <div class="submit-container">
+                <button type="button" class="btn btn-success btn-large" onclick="saveChanges()">Submit Weekly Update</button>
+                <p class="submit-help">Review everything above, then submit to save your weekly update to the database.</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Module scripts -->
-    <script src="js/privacy.js"></script>
     <script src="js/editor-utils.js"></script>
     <script src="js/api-client.js"></script>
     <script src="js/update-generator.js"></script>
@@ -149,6 +163,8 @@
             console.log('window.EditorJS:', typeof window.EditorJS);
             console.log('window.List:', typeof window.List);
             console.log('window.EditorjsList:', typeof window.EditorjsList);
+            console.log('window.EditorjsChecklist:', typeof window.EditorjsChecklist);
+            console.log('window.Checklist:', typeof window.Checklist);
             
             // Check if List is available on window after a delay
             setTimeout(() => {
