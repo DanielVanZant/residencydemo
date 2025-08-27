@@ -91,6 +91,7 @@
                 <div class="bullets-header-controls">
                     <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
                     <div class="edit-controls">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="togglePrivacyMode()">Hide Privacy Indicators</button>
                         <button type="button" class="btn btn-secondary btn-small" onclick="clearBullets()">Clear All</button>
                     </div>
                 </div>
@@ -99,11 +100,17 @@
                 
                 <div class="editor-help">
                     <strong>Tips:</strong> Click anywhere to edit • Enter for new bullet • Tab to indent • Shift+Tab to outdent • Drag to reorder
+                    <br>
+                    <small>Right-click bullet points to change privacy level • <a href="#" onclick="applyPrivacyAttributes(); return false;">Refresh Privacy Indicators</a></small>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Module scripts -->
+    <script src="js/privacy.js"></script>
+    <script src="js/editor-utils.js"></script>
+    <script src="js/api-client.js"></script>
     <script src="app.js"></script>
     <script>
         // Debug: Check what's loaded after page load
