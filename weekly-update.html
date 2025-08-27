@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Update Dashboard</title>
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="header">
+                <h1><span class="emphasis">weekly</span> update</h1>
+                <p>share your <span class="emphasis">progress</span>, challenges, and wins</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-wrapper">
+        <div class="container">
+            <div class="update-form">
+            <div class="date-header">
+                <h2><span class="italic">Week</span> of:</h2>
+                <input type="date" class="date-input" id="weekDate">
+            </div>
+
+            <form id="updateForm">
+                <div class="question-section">
+                    <label class="question-label">what did you <span class="emphasis">accomplish</span> this week?</label>
+                    <div class="question-hint">list your key achievements, completed tasks, and milestones reached</div>
+                    <textarea class="answer-input" name="accomplishments" placeholder="Example: Completed MVP features, onboarded 3 new customers, fixed critical bug in payment system..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">what are your <span class="emphasis">priorities</span> for next week?</label>
+                    <div class="question-hint">outline your top 3-5 goals and tasks for the upcoming week</div>
+                    <textarea class="answer-input" name="priorities" placeholder="Example: Launch beta version, conduct user interviews, optimize database queries..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">what <span class="emphasis">challenges</span> are you facing?</label>
+                    <div class="question-hint">describe any blockers, difficulties, or areas where you need help</div>
+                    <textarea class="answer-input" name="challenges" placeholder="Example: Integration issues with third-party API, need design feedback, struggling with time management..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">key <span class="emphasis">metrics</span> and data points</label>
+                    <div class="question-hint">share important numbers: users, revenue, engagement, experiments, etc.</div>
+                    <textarea class="answer-input" name="metrics" placeholder="Example: 150 active users (+25%), $5K MRR, 68% retention rate, A/B test showed 15% improvement..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">learnings</span> and insights</label>
+                    <div class="question-hint">what did you learn? any surprising discoveries or pivotal realizations?</div>
+                    <textarea class="answer-input" name="learnings" placeholder="Example: Users prefer mobile experience, pricing model needs adjustment, automation saved 10 hours/week..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">wins</span> and celebrations</label>
+                    <div class="question-hint">highlight positive moments, team achievements, or personal victories</div>
+                    <textarea class="answer-input" name="wins" placeholder="Example: First paying customer, team member's great contribution, positive user feedback..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">support</span> needed</label>
+                    <div class="question-hint">what resources, introductions, or assistance would help you move faster?</div>
+                    <textarea class="answer-input" name="support" placeholder="Example: Introduction to potential advisor, feedback on pitch deck, technical expertise in ML..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Save Update</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                    <button type="button" class="btn btn-primary" onclick="extractBullets()">Extract Bullet Points</button>
+                </div>
+            </form>
+
+            <div class="loading-spinner" id="loadingSpinner"></div>
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="bullets-section" id="bulletsSection">
+                <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
+                <div id="bulletsContainer"></div>
+            </div>
+        </div>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>
