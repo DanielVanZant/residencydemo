@@ -11,6 +11,7 @@
 
     /* Colors - Muted and Clean */
     --bg-primary: #FFFFFF;
+    --bg-secondary: #F8F9FA;
     --bg-light: #FAFAFA;
     --bg-section: #F8F9FA;
     --text-primary: #2D3748;
@@ -22,6 +23,9 @@
     --border-focus: #2D3748;
     --accent-primary: #4A5568;
     --accent-secondary: #2D3748;
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
 
     /* Spacing */
     --space-xs: 8px;

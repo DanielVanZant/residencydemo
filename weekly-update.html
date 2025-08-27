@@ -8,10 +8,13 @@
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/form.css">
     <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/privacy.css">
+    <link rel="stylesheet" href="css/updates.css">
     <link rel="stylesheet" href="css/animations.css">
     <!-- Editor.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
 </head>
 <body>
     <!-- Hero Section -->
@@ -77,10 +80,7 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="submit" class="btn btn-primary">Save Update</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
                     <button type="button" class="btn btn-primary" onclick="extractBullets()">Extract Bullet Points</button>
-                    <button type="button" class="btn btn-secondary btn-small" onclick="fillTestData()">Fill Test Data</button>
                 </div>
             </form>
 
@@ -92,7 +92,6 @@
                     <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
                     <div class="edit-controls">
                         <button type="button" class="btn btn-secondary btn-small" onclick="togglePrivacyMode()">Hide Privacy Indicators</button>
-                        <button type="button" class="btn btn-secondary btn-small" onclick="clearBullets()">Clear All</button>
                     </div>
                 </div>
                 
@@ -107,10 +106,41 @@
         </div>
     </section>
 
+    <!-- Formatted Updates Section -->
+    <section id="formattedUpdatesSection" class="formatted-updates-section">
+        <div class="container">
+            <div class="updates-header">
+                <div class="updates-header-controls">
+                    <div class="updates-header-text">
+                        <h2 class="updates-title"><span class="italic">formatted</span> updates</h2>
+                        <p class="updates-subtitle">Privacy-filtered versions ready for different audiences</p>
+                    </div>
+                    <div class="updates-controls">
+                        <button type="button" class="btn btn-primary btn-small" onclick="regenerateUpdates()">Regenerate Updates</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="formattedUpdates" class="formatted-updates-container">
+                <!-- Updates will be dynamically inserted here -->
+            </div>
+            
+            <div id="updatesLoading" class="simple-loading">
+                <div class="spinner"></div>
+                <p>Generating formatted updates...</p>
+            </div>
+            
+            <div id="updatesError" class="error-message">
+                <p>Failed to generate formatted updates. Please try again.</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Module scripts -->
     <script src="js/privacy.js"></script>
     <script src="js/editor-utils.js"></script>
     <script src="js/api-client.js"></script>
+    <script src="js/update-generator.js"></script>
     <script src="app.js"></script>
     <script>
         // Debug: Check what's loaded after page load

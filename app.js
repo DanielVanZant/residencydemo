@@ -57,10 +57,12 @@ function clearForm() {
 const privacyManager = new PrivacyManager();
 const editorUtils = new EditorUtils();
 const apiClient = new ApiClient();
+const updateGenerator = new UpdateGenerator();
 
 // Make available globally for button callbacks
 window.privacyManager = privacyManager;
 window.editorUtils = editorUtils;
+window.updateGenerator = updateGenerator;
 
 // Bullet extraction functionality
 async function extractBullets() {
@@ -155,6 +157,66 @@ function fillTestData() {
     form.support.value = "Introduction to potential design advisor. Feedback on pricing strategy. Technical expertise in database optimization.";
 }
 
+// Regenerate formatted updates from current bullet points
+async function regenerateUpdates() {
+    console.log('Regenerating formatted updates from current bullet points...');
+    
+    try {
+        // Get the current Editor.js data
+        const bulletEditor = window.bulletEditor;
+        if (!bulletEditor) {
+            showError('No bullet points available to regenerate updates from. Please extract bullet points first.');
+            return;
+        }
+        
+        // Show loading state
+        showLoading(false); // Don't show main loading spinner
+        editorUtils.showUpdatesLoading(true);
+        editorUtils.hideUpdatesError();
+        
+        console.log('Getting current bullet point data...');
+        const savedData = await bulletEditor.save();
+        console.log('Current bullet data:', savedData);
+        
+        // Find the list block
+        const listBlock = savedData.blocks.find(block => block.type === 'list');
+        if (!listBlock || !listBlock.data || !listBlock.data.items || listBlock.data.items.length === 0) {
+            throw new Error('No bullet points found to regenerate updates from');
+        }
+        
+        // Create the bullet data structure expected by the update generator
+        const bulletData = {
+            type: 'list',
+            data: {
+                style: 'unordered',
+                items: listBlock.data.items
+            }
+        };
+        
+        console.log('Regenerating formatted updates with current bullet data...');
+        const updates = await updateGenerator.generateAllUpdates(bulletData);
+        console.log('All formatted updates regenerated');
+        
+        // Clear existing updates and display new ones
+        const updatesContainer = document.getElementById('formattedUpdates');
+        if (updatesContainer) {
+            updatesContainer.innerHTML = '';
+        }
+        
+        updateGenerator.displayUpdates(updates);
+        editorUtils.showUpdatesLoading(false);
+        
+        console.log('Updates regenerated successfully');
+        
+    } catch (error) {
+        console.error('Error regenerating updates:', error);
+        editorUtils.showUpdatesLoading(false);
+        editorUtils.showUpdatesError(true);
+        showError('Failed to regenerate updates: ' + error.message);
+    }
+}
+
 window.fillTestData = fillTestData;
 window.togglePrivacyMode = () => privacyManager.togglePrivacyMode();
 window.applyPrivacyAttributes = () => privacyManager.applyPrivacyFromStoredData();
+window.regenerateUpdates = regenerateUpdates;

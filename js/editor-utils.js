@@ -34,6 +34,18 @@ class EditorUtils {
             };
         }
         
+        // Add Header tool if available
+        if (window.Header) {
+            tools.header = {
+                class: window.Header,
+                inlineToolbar: false,
+                config: {
+                    levels: [2, 3, 4],
+                    defaultLevel: 2
+                }
+            };
+        }
+        
         this.bulletEditor = new EditorJS({
             holder: 'editorjs',
             tools: tools,
@@ -47,6 +59,9 @@ class EditorUtils {
         });
         
         console.log('Editor initialized with tools:', Object.keys(tools));
+        
+        // Make editor accessible globally for regeneration
+        window.bulletEditor = this.bulletEditor;
         
         return this.bulletEditor;
     }
@@ -103,6 +118,10 @@ class EditorUtils {
                 privacyManager.applyPrivacyFromStoredData();
                 privacyManager.addPrivacyLegend();
                 privacyManager.addPrivacyClickHandlers();
+                
+                // Generate formatted updates after bullets are displayed
+                console.log('About to generate formatted updates with data:', markdownOrHierarchy);
+                this.generateFormattedUpdates(markdownOrHierarchy);
             }, 500); // Increased timeout to ensure Editor.js has fully rendered
             
         } else {
@@ -132,6 +151,67 @@ class EditorUtils {
         }
         
         document.getElementById('bulletsSection').classList.add('active');
+    }
+
+    // Generate formatted updates after bullets are displayed
+    async generateFormattedUpdates(bulletData) {
+        // Only generate if we have structured data with privacy information
+        if (typeof bulletData !== 'object' || !bulletData.type || !bulletData.data) {
+            console.log('No structured bullet data available for formatted updates');
+            return;
+        }
+
+        try {
+            // Show the formatted updates section first
+            document.getElementById('formattedUpdatesSection').classList.add('active');
+            
+            // Show loading state
+            this.showUpdatesLoading(true);
+            this.hideUpdatesError();
+            
+            console.log('Generating formatted updates...');
+            const updateGenerator = window.updateGenerator;
+            
+            if (!updateGenerator) {
+                throw new Error('UpdateGenerator not available');
+            }
+            
+            const updates = await updateGenerator.generateAllUpdates(bulletData);
+            console.log('All formatted updates generated');
+            
+            // Display the updates
+            updateGenerator.displayUpdates(updates);
+            this.showUpdatesLoading(false);
+            
+        } catch (error) {
+            console.error('Error generating formatted updates:', error);
+            this.showUpdatesLoading(false);
+            this.showUpdatesError(true);
+        }
+    }
+
+    // Show/hide loading state for formatted updates
+    showUpdatesLoading(show) {
+        const loadingEl = document.getElementById('updatesLoading');
+        if (loadingEl) {
+            console.log(`${show ? 'Showing' : 'Hiding'} updates loading indicator`);
+            loadingEl.classList.toggle('active', show);
+        } else {
+            console.error('Updates loading element not found');
+        }
+    }
+
+    // Show/hide error state for formatted updates
+    showUpdatesError(show) {
+        const errorEl = document.getElementById('updatesError');
+        if (errorEl) {
+            errorEl.classList.toggle('active', show);
+        }
+    }
+
+    // Hide error state for formatted updates
+    hideUpdatesError() {
+        this.showUpdatesError(false);
     }
 
     parseMarkdownToBlocks(markdown) {

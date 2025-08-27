@@ -190,6 +190,133 @@ Return as JSON with the exact structure specified.`;
     }
 });
 
+// API endpoint for generating formatted updates
+app.post('/api/generate-formatted-update', async (req, res) => {
+    console.log('Received generate-formatted-update request');
+    try {
+        const { formData, privacyLevel, systemPrompt, userPrompt } = req.body;
+        console.log('Privacy level:', privacyLevel);
+        console.log('Filtered content length:', formData?.filteredContent?.length || 0);
+        
+        // Get API key from environment or request
+        const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
+        
+        if (!apiKey) {
+            return res.status(401).json({ error: 'API key required' });
+        }
+
+        const enhancedSystemPrompt = `${systemPrompt}
+
+CRITICAL: Return ONLY a raw JSON object in Editor.js format with structured blocks (do NOT wrap in markdown code blocks):
+{
+  "blocks": [
+    {
+      "type": "header",
+      "data": {
+        "text": "Weekly Update - [Date]",
+        "level": 2
+      }
+    },
+    {
+      "type": "paragraph",
+      "data": {
+        "text": "Opening summary paragraph..."
+      }
+    },
+    {
+      "type": "header",
+      "data": {
+        "text": "Key Accomplishments",
+        "level": 3
+      }
+    },
+    {
+      "type": "list",
+      "data": {
+        "style": "unordered",
+        "items": ["Achievement 1", "Achievement 2"]
+      }
+    }
+  ]
+}
+
+Use these block types: header (levels 2-3), paragraph, and list (unordered). Structure the content with clear sections and make it professional and readable.`;
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 2000,
+                temperature: 0.3,
+                system: enhancedSystemPrompt,
+                messages: [
+                    {
+                        role: 'user',
+                        content: userPrompt
+                    }
+                ]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            return res.status(response.status).json({ 
+                error: errorData.error?.message || `API request failed: ${response.status}` 
+            });
+        }
+
+        const data = await response.json();
+        console.log('Claude API response received for formatted update');
+        
+        const rawContent = data.content[0].text;
+        console.log(`Generated ${privacyLevel} update (${rawContent.length} chars)`);
+        
+        // Try to parse as structured Editor.js format
+        let formattedUpdate = rawContent;
+        let editorBlocks = null;
+        
+        try {
+            let cleanContent = rawContent.trim();
+            
+            // Handle markdown code block wrapping
+            if (cleanContent.startsWith('```json') && cleanContent.endsWith('```')) {
+                cleanContent = cleanContent.replace(/^```json\s*\n?/, '').replace(/\n?```$/, '').trim();
+            } else if (cleanContent.startsWith('```') && cleanContent.endsWith('```')) {
+                cleanContent = cleanContent.replace(/^```\s*\n?/, '').replace(/\n?```$/, '').trim();
+            }
+            
+            // Check if JSON appears truncated
+            if (cleanContent.trim().startsWith('{') && !cleanContent.trim().endsWith('}')) {
+                console.log(`Detected incomplete JSON for ${privacyLevel}, skipping JSON parse`);
+                throw new Error('Incomplete JSON response');
+            }
+            
+            const parsed = JSON.parse(cleanContent);
+            if (parsed.blocks && Array.isArray(parsed.blocks)) {
+                editorBlocks = parsed;
+                console.log(`Parsed structured blocks for ${privacyLevel}: ${parsed.blocks.length} blocks`);
+            }
+        } catch (parseError) {
+            console.log(`Could not parse as structured format for ${privacyLevel}, using raw text:`, parseError.message);
+        }
+        
+        res.json({ 
+            formattedUpdate: formattedUpdate,
+            editorBlocks: editorBlocks,
+            format: editorBlocks ? 'editorjs' : 'text'
+        });
+        
+    } catch (error) {
+        console.error('Server error in formatted update generation:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Serve the HTML file
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'weekly-update.html'));
