@@ -275,4 +275,130 @@ router.get('/user/:username/north-star', async (req, res) => {
     }
 });
 
+// Generate user summaries
+router.post('/generate-user-summaries', async (req, res) => {
+    console.log('Received generate user summaries request');
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ error: 'Username required' });
+        }
+        
+        // Get API key from environment or request
+        const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
+        
+        if (!apiKey) {
+            return res.status(401).json({ error: 'API key required' });
+        }
+        
+        console.log(`Generating summaries for user: ${username}`);
+        
+        // Get database instance from app locals
+        const db = req.app.locals.db;
+        
+        // Get user and their north star metric
+        const user = await db.getOrCreateUser(username);
+        const updates = await db.getUserUpdates(username);
+        
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'No updates found for user' });
+        }
+        
+        // Prepare data for summary generation
+        const userData = {
+            username: username,
+            northStarMetric: user.north_star_metric || 'Progress Metric',
+            updates: updates
+        };
+        
+        const anthropicClient = new AnthropicClient(apiKey);
+        
+        // Generate public summary first
+        console.log('Generating public summary...');
+        const publicResponse = await anthropicClient.generateUserSummary(userData, 'public');
+        
+        if (!publicResponse.ok) {
+            const publicError = await publicResponse.json().catch(() => ({}));
+            return res.status(500).json({ 
+                error: 'Failed to generate public summary',
+                publicError: publicError?.error?.message
+            });
+        }
+        
+        const publicData = await publicResponse.json();
+        const publicSummary = publicData.content[0].text;
+        
+        // Generate personal summary, passing the public summary
+        console.log('Generating personal summary (additional private content only)...');
+        const personalResponse = await anthropicClient.generateUserSummary(userData, 'personal', publicSummary);
+        
+        if (!personalResponse.ok) {
+            const personalError = await personalResponse.json().catch(() => ({}));
+            return res.status(500).json({ 
+                error: 'Failed to generate personal summary',
+                personalError: personalError?.error?.message
+            });
+        }
+        
+        const personalData = await personalResponse.json();
+        const personalSummary = personalData.content[0].text;
+        
+        // Save summaries to database
+        await db.saveUserSummaries(username, publicSummary, personalSummary);
+        
+        console.log('User summaries generated and saved successfully');
+        res.json({ 
+            publicSummary,
+            personalSummary,
+            updatesCount: updates.length
+        });
+        
+    } catch (error) {
+        console.error('Error generating user summaries:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get user summaries
+router.get('/user-summaries/:username', async (req, res) => {
+    console.log('Received get user summaries request');
+    try {
+        const { username } = req.params;
+        
+        if (!username) {
+            return res.status(400).json({ error: 'Username required' });
+        }
+        
+        console.log(`Getting summaries for user: ${username}`);
+        
+        // Get database instance from app locals
+        const db = req.app.locals.db;
+        const summaries = await db.getUserSummaries(username);
+        
+        res.json(summaries);
+        
+    } catch (error) {
+        console.error('Error getting user summaries:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all user summaries for homepage
+router.get('/all-user-summaries', async (req, res) => {
+    console.log('Received get all user summaries request');
+    try {
+        // Get database instance from app locals
+        const db = req.app.locals.db;
+        const allSummaries = await db.getAllUserSummaries();
+        
+        console.log(`Found ${allSummaries.length} user summaries`);
+        res.json({ summaries: allSummaries });
+        
+    } catch (error) {
+        console.error('Error getting all user summaries:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

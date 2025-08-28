@@ -61,6 +61,46 @@ class UserSession {
             });
         }
     }
+
+    // Populate user dropdown from API
+    async populateUserDropdown(selectElementId, callback = null) {
+        try {
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            const userSelect = document.getElementById(selectElementId);
+            
+            // Clear existing options (except the placeholder)
+            while (userSelect.children.length > 1) {
+                userSelect.removeChild(userSelect.lastChild);
+            }
+            
+            // Add user options
+            data.users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.username;
+                option.textContent = user.username;
+                userSelect.appendChild(option);
+            });
+            
+            console.log(`Populated dropdown with ${data.users.length} users`);
+            
+            // Restore saved user selection after dropdown is populated
+            const savedUser = this.restoreUserSelection(userSelect);
+            
+            // Set up change handler
+            this.setupUserChangeHandler(userSelect, callback);
+            
+            // Return saved user for initial callback
+            return savedUser;
+            
+        } catch (error) {
+            console.error('Error loading users:', error);
+            throw error;
+        }
+    }
 }
 
 // Global user session instance

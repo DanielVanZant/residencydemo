@@ -3,6 +3,7 @@ class Dashboard {
     constructor() {
         this.currentUser = null;
         this.updates = [];
+        this.summaries = null;
         this.chart = null;
         this.init();
     }
@@ -78,10 +79,52 @@ class Dashboard {
                 window.history.pushState({}, '', url);
             }
         });
+        
+        // Set up tab event listeners
+        this.setupTabEventListeners();
+    }
+
+    setupTabEventListeners() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                this.switchTab(tabName);
+            });
+        });
+    }
+
+    switchTab(tabName) {
+        // Update button states
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.tab === tabName) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Update tab content visibility
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        const activeTab = document.getElementById(`${tabName}Tab`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
+
+        // Load summary data if switching to summary tab
+        if (tabName === 'summary' && this.currentUser) {
+            // Always reload summaries to ensure we get the right user's data
+            this.loadUserSummaries(this.currentUser);
+        }
     }
 
     async loadUserUpdates(username) {
         this.currentUser = username;
+        this.summaries = null; // Clear cached summaries when switching users
         this.showLoading(true);
         this.hideError();
         this.hideEmpty();
@@ -102,9 +145,17 @@ class Dashboard {
             if (this.updates.length === 0) {
                 this.showEmpty(true);
                 this.hideChart();
+                this.hideTabs();
             } else {
                 this.displayUpdates();
                 this.displayChart();
+                this.showTabs();
+                
+                // If Summary tab is active, reload summaries for the new user
+                const activeSummaryTab = document.querySelector('.tab-button.active[data-tab="summary"]');
+                if (activeSummaryTab) {
+                    await this.loadUserSummaries(username);
+                }
             }
             
         } catch (error) {
@@ -308,6 +359,17 @@ class Dashboard {
         this.hideEmpty();
         this.showLoading(false);
         this.hideChart();
+        this.hideTabs();
+        this.summaries = null;
+        
+        // Clear summary container
+        const summaryContainer = document.getElementById('userSummaryContainer');
+        if (summaryContainer) {
+            summaryContainer.innerHTML = '';
+        }
+        
+        // Reset to updates tab
+        this.switchTab('updates');
     }
 
     displayChart() {
@@ -445,6 +507,119 @@ class Dashboard {
             this.chart.destroy();
             this.chart = null;
         }
+    }
+
+    showTabs() {
+        const tabsContainer = document.getElementById('dashboardTabs');
+        tabsContainer.style.display = 'flex';
+    }
+
+    hideTabs() {
+        const tabsContainer = document.getElementById('dashboardTabs');
+        tabsContainer.style.display = 'none';
+    }
+
+    async loadUserSummaries(username) {
+        try {
+            console.log(`Loading summaries for user: ${username}`);
+            const response = await fetch(`/api/user-summaries/${username}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            this.summaries = data;
+            
+            console.log('User summaries loaded:', data);
+            this.displaySummaries();
+            
+        } catch (error) {
+            console.error('Error loading user summaries:', error);
+            this.displaySummaryError();
+        }
+    }
+
+    displaySummaries() {
+        if (!this.summaries || (!this.summaries.public_summary && !this.summaries.personal_summary)) {
+            this.displaySummaryError();
+            return;
+        }
+
+        const container = document.getElementById('userSummaryContainer');
+        container.innerHTML = '';
+
+        // Public Summary
+        if (this.summaries.public_summary) {
+            const publicCard = this.createSummaryCard('Public Summary', this.summaries.public_summary, 'public');
+            container.appendChild(publicCard);
+        }
+
+        // Personal Summary
+        if (this.summaries.personal_summary) {
+            const personalCard = this.createSummaryCard('Personal Summary', this.summaries.personal_summary, 'personal');
+            container.appendChild(personalCard);
+        }
+    }
+
+    createSummaryCard(title, content, type) {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        
+        card.innerHTML = `
+            <div class="summary-header">
+                <h3 class="summary-type-title">${title}</h3>
+                <span class="summary-badge ${type}">${type}</span>
+            </div>
+            <div class="summary-content" id="${type}-summary-content"></div>
+        `;
+        
+        // Render markdown content after adding to DOM
+        setTimeout(() => {
+            this.renderMarkdown(content, `${type}-summary-content`);
+        }, 0);
+        
+        return card;
+    }
+
+    renderMarkdown(markdownText, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container || !markdownText) return;
+
+        // Simple markdown-to-HTML conversion
+        let html = markdownText
+            // Headers
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            // Bold and italic
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Line breaks and paragraphs
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+        
+        // Wrap in paragraphs
+        html = '<p>' + html + '</p>';
+        
+        // Clean up empty paragraphs
+        html = html.replace(/<p><\/p>/g, '').replace(/<p><br>/g, '<p>');
+        
+        container.innerHTML = html;
+    }
+
+    displaySummaryError() {
+        const container = document.getElementById('userSummaryContainer');
+        container.innerHTML = `
+            <div class="summary-card">
+                <div class="summary-header">
+                    <h3 class="summary-type-title">No Summaries Available</h3>
+                </div>
+                <div class="summary-content">
+                    <p>Summaries have not been generated for this user yet. Summaries are automatically created when weekly updates are submitted.</p>
+                </div>
+            </div>
+        `;
     }
 }
 

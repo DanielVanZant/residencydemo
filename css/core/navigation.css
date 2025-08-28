@@ -1,0 +1,131 @@
+/* Navigation Components */
+
+/* Top Navigation */
+.top-nav {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-light);
+    padding: var(--space-md) 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-sm);
+}
+
+.top-nav .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+}
+
+.brand-title {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+}
+
+.nav-account {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.account-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.account-selector label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.account-select {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    min-width: 160px;
+    transition: all var(--transition-fast);
+}
+
+.account-select:hover {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow-sm);
+}
+
+.account-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.nav-links {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.nav-link {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: all var(--transition-fast);
+}
+
+.nav-link:hover {
+    background: var(--bg-section);
+    color: var(--text-primary);
+}
+
+.nav-link:active {
+    background: var(--border-light);
+}
+
+/* Adjust hero section spacing to account for fixed nav */
+.hero-section {
+    padding-top: var(--space-2xl);
+}
+
+/* Mobile responsive navigation */
+@media (max-width: 768px) {
+    .top-nav .container {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: stretch;
+    }
+    
+    .nav-account {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: stretch;
+    }
+    
+    .account-selector {
+        justify-content: space-between;
+    }
+    
+    .nav-links {
+        justify-content: center;
+    }
+    
+    .account-select {
+        min-width: auto;
+        flex: 1;
+    }
+}

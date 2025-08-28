@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Update Dashboard</title>
     <script src="server/config.js"></script>
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/form.css">
-    <link rel="stylesheet" href="css/editor.css">
-    <link rel="stylesheet" href="css/updates.css">
-    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/core/variables.css">
+    <link rel="stylesheet" href="css/core/base.css">
+    <link rel="stylesheet" href="css/core/layout.css">
+    <link rel="stylesheet" href="css/pages/form.css">
+    <link rel="stylesheet" href="css/pages/editor.css">
+    <link rel="stylesheet" href="css/pages/updates.css">
+    <link rel="stylesheet" href="css/core/animations.css">
     <!-- Editor.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
@@ -184,11 +186,17 @@
     </section>
 
     <!-- Module scripts -->
-    <script src="js/user-session.js"></script>
-    <script src="js/editor-utils.js"></script>
-    <script src="js/api-client.js"></script>
-    <script src="js/update-generator.js"></script>
-    <script src="app.js"></script>
+    <!-- Core modules -->
+    <script src="js/core/user-session.js"></script>
+    <script src="js/core/api-client.js"></script>
+    <script src="js/pages/editor-utils.js"></script>
+    <script src="js/pages/update-generator.js"></script>
+    
+    <!-- UI utilities -->
+    <script src="js/core/ui-utils.js"></script>
+    
+    <!-- Weekly Update System (consolidated form management) -->
+    <script src="js/forms/weekly-update-system.js"></script>
     <script>
         // Debug: Check what's loaded after page load
         window.addEventListener('DOMContentLoaded', () => {

@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Updates Dashboard</title>
     <script src="server/config.js"></script>
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/form.css">
-    <link rel="stylesheet" href="css/editor.css">
-    <link rel="stylesheet" href="css/updates.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/core/variables.css">
+    <link rel="stylesheet" href="css/core/base.css">
+    <link rel="stylesheet" href="css/core/layout.css">
+    <link rel="stylesheet" href="css/core/navigation.css">
+    <link rel="stylesheet" href="css/pages/form.css">
+    <link rel="stylesheet" href="css/pages/editor.css">
+    <link rel="stylesheet" href="css/pages/updates.css">
+    <link rel="stylesheet" href="css/pages/dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
     <!-- Editor.js CDN for rendering formatted updates -->
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
@@ -67,7 +70,7 @@
                 <a href="/weekly-update.html" class="btn btn-primary">Create First Update</a>
             </div>
 
-            <!-- North Star Metric Chart -->
+            <!-- North Star Metric Chart - Always visible at top -->
             <div id="northStarChartContainer" class="chart-container" style="display: none;">
                 <h3 class="chart-title">North Star Progress</h3>
                 <div class="chart-wrapper">
@@ -75,13 +78,33 @@
                 </div>
             </div>
 
-            <div id="dashboardUpdates" class="dashboard-updates">
-                <!-- Updates will be populated here -->
+            <!-- Dashboard Tabs -->
+            <div id="dashboardTabs" class="dashboard-tabs" style="display: none;">
+                <button class="tab-button active" data-tab="updates">Weekly Updates</button>
+                <button class="tab-button" data-tab="summary">Summary</button>
+            </div>
+
+            <!-- Updates Tab Content -->
+            <div id="updatesTab" class="tab-content active">
+                <div id="dashboardUpdates" class="dashboard-updates">
+                    <!-- Updates will be populated here -->
+                </div>
+            </div>
+
+            <!-- Summary Tab Content -->
+            <div id="summaryTab" class="tab-content">
+                <div id="userSummaryContainer" class="user-summary-container">
+                    <!-- User summaries will be populated here -->
+                </div>
             </div>
         </div>
     </section>
 
-    <script src="js/user-session.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/core/user-session.js"></script>
+    <script src="js/core/ui-utils.js"></script>
+    <script src="js/dashboard/chart-manager.js"></script>
+    <script src="js/dashboard/content-renderer.js"></script>
+    <script src="js/dashboard/dashboard-summary-manager.js"></script>
+    <script src="js/dashboard/dashboard.js"></script>
 </body>
 </html>

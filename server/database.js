@@ -85,6 +85,20 @@ class Database {
             )
         `);
 
+        // User summaries table for comprehensive overviews
+        this.db.run(`
+            CREATE TABLE IF NOT EXISTS user_summaries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                public_summary TEXT NOT NULL,
+                personal_summary TEXT NOT NULL,
+                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE(user_id)
+            )
+        `);
+
         console.log('Database tables created/verified');
         
         // Initialize example north star metrics
@@ -353,6 +367,63 @@ class Database {
                 console.error(`Error setting north star for ${username}:`, error);
             }
         }
+    }
+
+    // Save or update user summaries
+    async saveUserSummaries(username, publicSummary, personalSummary) {
+        const user = await this.getOrCreateUser(username);
+        
+        return new Promise((resolve, reject) => {
+            this.db.run(`
+                INSERT OR REPLACE INTO user_summaries (user_id, public_summary, personal_summary, last_updated)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            `, [user.id, publicSummary, personalSummary], function(err) {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve({ id: this.lastID || user.id, changes: this.changes });
+            });
+        });
+    }
+
+    // Get user summaries
+    async getUserSummaries(username) {
+        const user = await this.getOrCreateUser(username);
+        
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT public_summary, personal_summary, last_updated, created_at
+                FROM user_summaries
+                WHERE user_id = ?
+            `, [user.id], (err, row) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(row || { public_summary: null, personal_summary: null, last_updated: null, created_at: null });
+            });
+        });
+    }
+
+    // Get all users with summaries for homepage
+    async getAllUserSummaries() {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT u.username, u.north_star_metric, u.north_star_description,
+                       us.public_summary, us.personal_summary, us.last_updated
+                FROM users u
+                LEFT JOIN user_summaries us ON u.id = us.user_id
+                WHERE us.public_summary IS NOT NULL
+                ORDER BY us.last_updated DESC
+            `, [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(rows);
+            });
+        });
     }
 
     close() {

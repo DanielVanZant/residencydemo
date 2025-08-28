@@ -49,7 +49,7 @@ const northStarData = {
 };
 
 // Connect to database
-const dbPath = path.join(__dirname, 'weekly_updates.db');
+const dbPath = path.join(__dirname, '../weekly_updates.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err);

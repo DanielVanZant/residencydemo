@@ -26,7 +26,7 @@ app.use('/api', apiRoutes);
 
 // Serve the HTML files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'dashboard.html'));
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
 app.get('/weekly-update.html', (req, res) => {

@@ -138,6 +138,157 @@ Return as markdown checklist format.`;
         return await this.callWithRetry(requestBody);
     }
 
+    // Generate comprehensive user summary from all updates
+    async generateUserSummary(userData, summaryType, publicSummary = null) {
+        const { username, northStarMetric, updates } = userData;
+        const isPersonal = summaryType === 'personal';
+        
+        // Prepare update text for summary generation
+        const publicUpdateTexts = updates.map(update => {
+            const weekText = `Week of ${new Date(update.weekDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}:\n`;
+            
+            let content = '';
+            if (update.formattedUpdates.published) {
+                content += this.extractTextFromEditorBlocks(update.formattedUpdates.published) + '\n';
+            }
+            
+            // Add north star progress
+            if (update.northStarValue) {
+                content += `${northStarMetric}: ${update.northStarValue}\n`;
+            }
+            
+            return weekText + content;
+        }).join('\n---\n\n');
+
+        // For personal summary, gather only internal/private content
+        const internalUpdateTexts = isPersonal ? updates.map(update => {
+            const weekText = `Week of ${new Date(update.weekDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}:\n`;
+            
+            let content = '';
+            if (update.formattedUpdates.internal) {
+                content += this.extractTextFromEditorBlocks(update.formattedUpdates.internal) + '\n';
+            }
+            
+            return content.trim() ? weekText + content : '';
+        }).filter(text => text).join('\n---\n\n') : '';
+
+        let prompt;
+        
+        if (isPersonal && publicSummary) {
+            // Personal summary: only add what wasn't in public
+            prompt = `You are adding personal notes to supplement a public summary for ${username}.
+
+CONTEXT:
+- User: ${username}  
+- North Star Metric: ${northStarMetric}
+- Time Period: ${updates.length} weekly updates SO FAR
+- Audience: Personal reflection and mentors
+
+PUBLIC SUMMARY ALREADY WRITTEN:
+${publicSummary}
+
+INTERNAL/PRIVATE NOTES FROM WEEKLY UPDATES (USE ONLY THIS):
+${internalUpdateTexts}
+
+STRICT INSTRUCTIONS:
+- Write ONLY additional personal information from the internal notes above (200-400 words)
+- Use ONLY information explicitly stated in the internal/private notes
+- DO NOT invent or assume any information not directly stated
+- Frame as mid-residency personal reflections on work so far
+
+CRITICAL: Use a "ZOOMING IN" structure for personal content too:
+
+1. **Most important personal challenge** - The biggest personal issue (1-2 sentences)
+2. **Key personal impacts** - How the work is affecting me personally (1 paragraph)
+3. **Specific challenges** - Detailed personal struggles from the notes (1-2 paragraphs)
+4. **What I need** - Support or changes needed going forward (if mentioned)
+
+Focus on actual private content from the updates:
+- Personal challenges mentioned
+- Internal thoughts or doubts stated  
+- Health or personal issues noted
+- Team dynamics or conflicts described
+
+Write in first person. Use markdown formatting.
+Start directly with content - no introduction.
+If there's limited private content, keep it brief rather than inventing details.`;
+        } else {
+            // Public summary
+            prompt = `You are writing a mid-residency summary for ${username} based ONLY on information explicitly stated in their weekly updates.
+
+CONTEXT:
+- User: ${username}
+- North Star Metric: ${northStarMetric}
+- Time Period: ${updates.length} weekly updates SO FAR
+- Audience: Public/professional audience (colleagues, managers, external readers)
+
+WEEKLY UPDATES (USE ONLY THIS INFORMATION):
+${publicUpdateTexts}
+
+STRICT INSTRUCTIONS:
+- Write a professional summary (400-600 words) of the work completed SO FAR
+- Use ONLY information explicitly mentioned in the weekly updates above
+- DO NOT invent, extrapolate, or assume any information not directly stated
+- Write in first person as a mid-residency reflection on progress to date
+- Frame as "work so far" and "progress to date" - this is NOT a final summary
+
+CRITICAL: Use a "ZOOMING IN" structure - start with the highest-level summary and gradually add more detail:
+
+1. **One-sentence summary** - The absolute core of what I'm doing (1 sentence)
+2. **High-level overview** - Main focus and key metric progress (2-3 sentences)
+3. **Major achievements** - Top 2-3 accomplishments so far (1 paragraph)
+4. **Expanding detail** - More specific work, methods, and results (2-3 paragraphs)
+5. **Current status** - Where things stand now and immediate next steps (1 paragraph)
+
+This structure ensures someone reading only the first paragraph gets the essential information, while those reading further get progressively more detail.
+
+${northStarMetric} progress: Include the metric progression prominently early in the summary.
+
+Use markdown formatting. Stick strictly to facts from the updates provided.`;
+        }
+
+        const requestBody = {
+            model: this.defaultModel,
+            max_tokens: 4000,
+            temperature: 0.4,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ]
+        };
+
+        return await this.callWithRetry(requestBody);
+    }
+
+    // Extract text content from Editor.js blocks
+    extractTextFromEditorBlocks(editorData) {
+        if (typeof editorData === 'string') {
+            return editorData;
+        }
+        
+        if (!editorData || !editorData.blocks) {
+            return '';
+        }
+        
+        return editorData.blocks.map(block => {
+            switch (block.type) {
+                case 'header':
+                    return block.data.text || '';
+                case 'paragraph':
+                    return block.data.text || '';
+                case 'list':
+                    return (block.data.items || []).map(item => {
+                        const text = typeof item === 'string' ? item : (item.content || '');
+                        return `• ${text}`;
+                    }).join('\n');
+                default:
+                    return '';
+            }
+        }).filter(text => text.trim()).join('\n\n');
+    }
+
     // Generate formatted update from bullet data
     async generateFormattedUpdate(bulletText, updateType) {
         const systemPrompt = updateType === 'internal' 
