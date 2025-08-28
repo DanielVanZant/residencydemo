@@ -1,0 +1,64 @@
+{
+  "username": "ada-lovelace",
+  "updates": [
+    {
+      "weekDate": "2025-08-20",
+      "bulletPoints": "- [x] Completed breakthrough on Bernoulli numbers algorithm\n  - [x] Developed elegant recursive loop structure\n  - [ ] Still need better documentation\n- [ ] Personal health concerns from overwork\n  - [x] Completed 47 pages of notes\n  - [ ] Need to improve sleep schedule",
+      "publishedUpdate": "Made significant progress on the Bernoulli numbers algorithm this week. Developed an elegant recursive loop structure and completed 47 pages of technical documentation. The breakthrough represents a major advancement in computational mathematics.",
+      "internalUpdate": "While the algorithm work went well, I'm concerned about the personal cost. Working 3 all-nighters isn't sustainable, and I need to find better work-life balance. The sleep schedule is becoming a real problem."
+    },
+    {
+      "weekDate": "2025-08-13", 
+      "bulletPoints": {
+        "style": "checklist",
+        "meta": {},
+        "items": [
+          {
+            "content": "Started work on Fibonacci sequence generator",
+            "meta": { "checked": true },
+            "items": [
+              {
+                "content": "Basic algorithm complete",
+                "meta": { "checked": true },
+                "items": []
+              },
+              {
+                "content": "Need optimization for large numbers", 
+                "meta": { "checked": false },
+                "items": []
+              }
+            ]
+          },
+          {
+            "content": "Meeting with Babbage went well",
+            "meta": { "checked": true },
+            "items": []
+          },
+          {
+            "content": "Struggling with notation system limitations",
+            "meta": { "checked": false },
+            "items": []
+          }
+        ]
+      },
+      "publishedUpdate": {
+        "blocks": [
+          {
+            "type": "header",
+            "data": {
+              "text": "Weekly Progress Update",
+              "level": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "data": {
+              "text": "Completed the basic Fibonacci sequence generator algorithm and had a productive meeting with Babbage to discuss the Analytical Engine capabilities."
+            }
+          }
+        ]
+      },
+      "internalUpdate": "The notation system is becoming a real bottleneck. I'm essentially inventing programming syntax from scratch with no precedent. Need to think about this more systematically."
+    }
+  ]
+}

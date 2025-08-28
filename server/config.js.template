@@ -1,7 +1,0 @@
-// Rename this file to config.js and add your API key
-const API_CONFIG = {
-    ANTHROPIC_API_KEY: 'your-anthropic-api-key-here',
-    // Using Claude Sonnet 4 (latest available)
-    MODEL: 'claude-sonnet-4',
-    TEMPERATURE: 0
-};

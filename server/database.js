@@ -154,7 +154,7 @@ class Database {
         return new Promise((resolve, reject) => {
             this.db.all(`
                 SELECT wu.*, 
-                       GROUP_CONCAT(fu.privacy_level || ':' || fu.content_json, '|||') as formatted_updates
+                       GROUP_CONCAT(fu.privacy_level || '::JSON::' || fu.content_json, '|||SEPARATOR|||') as formatted_updates
                 FROM weekly_updates wu
                 LEFT JOIN formatted_updates fu ON wu.id = fu.weekly_update_id
                 WHERE wu.user_id = ?
@@ -186,15 +186,20 @@ class Database {
         if (!formattedUpdatesString) return {};
         
         const updates = {};
-        const parts = formattedUpdatesString.split('|||');
+        const parts = formattedUpdatesString.split('|||SEPARATOR|||');
         
         parts.forEach(part => {
-            const [privacyLevel, contentJson] = part.split(':', 2);
-            if (privacyLevel && contentJson) {
-                try {
-                    updates[privacyLevel] = JSON.parse(contentJson);
-                } catch (e) {
-                    console.error('Error parsing formatted update:', e);
+            const separatorIndex = part.indexOf('::JSON::');
+            if (separatorIndex !== -1) {
+                const privacyLevel = part.substring(0, separatorIndex);
+                const contentJson = part.substring(separatorIndex + 8); // 8 = length of '::JSON::'
+                
+                if (privacyLevel && contentJson) {
+                    try {
+                        updates[privacyLevel] = JSON.parse(contentJson);
+                    } catch (e) {
+                        console.error('Error parsing formatted update:', e, 'Part:', part);
+                    }
                 }
             }
         });
@@ -209,7 +214,7 @@ class Database {
         return new Promise((resolve, reject) => {
             this.db.get(`
                 SELECT wu.*, 
-                       GROUP_CONCAT(fu.privacy_level || ':' || fu.content_json, '|||') as formatted_updates
+                       GROUP_CONCAT(fu.privacy_level || '::JSON::' || fu.content_json, '|||SEPARATOR|||') as formatted_updates
                 FROM weekly_updates wu
                 LEFT JOIN formatted_updates fu ON wu.id = fu.weekly_update_id
                 WHERE wu.user_id = ? AND wu.week_date = ?
@@ -233,6 +238,19 @@ class Database {
                     createdAt: row.created_at,
                     updatedAt: row.updated_at
                 });
+            });
+        });
+    }
+
+    // Get all users for dropdown
+    async getAllUsers() {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT username FROM users ORDER BY username', [], (err, rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(rows);
             });
         });
     }
