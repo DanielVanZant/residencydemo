@@ -17,12 +17,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
 </head>
 <body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="brand-title">Weekly Updates</span>
+            </div>
+            <div class="nav-account">
+                <div class="account-selector">
+                    <label for="username">Account:</label>
+                    <select class="account-select" id="username">
+                        <option value="">Select account...</option>
+                    </select>
+                </div>
+                <div class="nav-links">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
             <div class="header">
-                <h1><span class="emphasis">weekly</span> update</h1>
-                <p>share your <span class="emphasis">progress</span>, challenges, and wins</p>
+                <h1><em>weekly</em> update</h1>
+                <p>share your <em>progress</em>, <em>challenges</em>, and wins</p>
             </div>
         </div>
     </section>
@@ -36,13 +56,25 @@
                     <h2><span class="italic">Week</span> of:</h2>
                     <input type="date" class="date-input" id="weekDate">
                 </div>
-                <div class="user-section">
-                    <label for="username">User:</label>
-                    <input type="text" class="username-input" id="username" placeholder="Enter your username" value="demo-user">
-                </div>
             </div>
 
             <form id="updateForm">
+                <!-- North Star Section -->
+                <div class="north-star-section">
+                    <h3 class="north-star-title">your <em>north star</em> metric</h3>
+                    <div class="north-star-hint" id="northStarHint">track the single most important number that represents your core focus and progress during the residency</div>
+                    <div class="north-star-inputs">
+                        <div class="north-star-value">
+                            <label for="northStarValue" id="northStarValueLabel">current value</label>
+                            <input type="number" step="any" class="north-star-input" id="northStarValue" name="northStarValue" placeholder="0.0">
+                        </div>
+                        <div class="north-star-note">
+                            <label for="northStarNote">context & reflection</label>
+                            <textarea class="north-star-textarea" id="northStarNote" name="northStarNote" placeholder="Brief note about this week's change, what influenced it, and what it means for your progress..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="question-section">
                     <label class="question-label">what did you <span class="emphasis">accomplish</span> this week?</label>
                     <div class="question-hint">list your key achievements, completed tasks, and milestones reached</div>
@@ -152,6 +184,7 @@
     </section>
 
     <!-- Module scripts -->
+    <script src="js/user-session.js"></script>
     <script src="js/editor-utils.js"></script>
     <script src="js/api-client.js"></script>
     <script src="js/update-generator.js"></script>

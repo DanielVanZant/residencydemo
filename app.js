@@ -1,9 +1,57 @@
 // Set today's date as default
 document.getElementById('weekDate').valueAsDate = new Date();
 
+// Populate user dropdown
+async function populateUserDropdown() {
+    try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const userSelect = document.getElementById('username');
+        
+        // Clear existing options (except the placeholder)
+        while (userSelect.children.length > 1) {
+            userSelect.removeChild(userSelect.lastChild);
+        }
+        
+        // Add user options
+        data.users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.username;
+            option.textContent = user.username;
+            userSelect.appendChild(option);
+        });
+        
+        console.log(`Populated dropdown with ${data.users.length} users`);
+        
+        // Restore saved user selection after dropdown is populated
+        const savedUser = window.userSession.restoreUserSelection(userSelect);
+        if (savedUser) {
+            await loadUserNorthStar(savedUser);
+        }
+        
+        // Set up user session change handler
+        window.userSession.setupUserChangeHandler(userSelect, async (selectedUser) => {
+            if (selectedUser) {
+                await loadUserNorthStar(selectedUser);
+            } else {
+                clearNorthStarDisplay();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+// Load user dropdown on page load
+populateUserDropdown();
+
 // Auto-save to localStorage
 const form = document.getElementById('updateForm');
-const inputs = form.querySelectorAll('textarea');
+const inputs = form.querySelectorAll('textarea, input[name="northStarValue"], textarea[name="northStarNote"]');
 
 // Load saved data
 inputs.forEach(input => {
@@ -278,12 +326,18 @@ async function saveChanges() {
         
         console.log('Collected formatted updates:', Object.keys(formattedUpdates));
         
+        // Get north star data
+        const northStarValue = document.getElementById('northStarValue').value.trim();
+        const northStarNote = document.getElementById('northStarNote').value.trim();
+        
         // Prepare data for API
         const saveData = {
             username: username,
             weekDate: weekDate,
             bulletPointsJson: JSON.stringify(listBlock.data),
-            formattedUpdates: formattedUpdates
+            formattedUpdates: formattedUpdates,
+            northStarValue: northStarValue,
+            northStarNote: northStarNote
         };
         
         console.log('Saving to database...');
@@ -337,10 +391,99 @@ function showSuccessMessage(message) {
     successDiv.textContent = message;
     successDiv.classList.add('active');
     
-    // Auto-hide after 5 seconds (longer for submit confirmation)
+    // Auto-hide after 3 seconds, then redirect to dashboard
     setTimeout(() => {
         successDiv.classList.remove('active');
-    }, 5000);
+        
+        // Redirect to dashboard after successful submission
+        window.location.href = '/dashboard.html';
+    }, 3000);
+}
+
+// Load user's north star metric information
+async function loadUserNorthStar(username) {
+    try {
+        console.log(`Loading north star info for user: ${username}`);
+        const response = await fetch(`/api/user/${username}/north-star`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('North star data received:', data);
+        
+        updateNorthStarDisplay(data.northStarMetric, data.northStarDescription, data.mostRecentValue, data.mostRecentDate);
+        
+    } catch (error) {
+        console.error('Error loading north star info:', error);
+        clearNorthStarDisplay();
+    }
+}
+
+// Update the north star display with user's specific metric
+function updateNorthStarDisplay(metric, description, mostRecentValue, mostRecentDate) {
+    const hintElement = document.getElementById('northStarHint');
+    const labelElement = document.getElementById('northStarValueLabel');
+    const inputElement = document.getElementById('northStarValue');
+    
+    if (metric && description) {
+        hintElement.textContent = `${metric}: ${description}`;
+        
+        // If we have a most recent value, show it and update label
+        if (mostRecentValue !== null && mostRecentValue !== undefined) {
+            inputElement.value = mostRecentValue;
+            labelElement.textContent = `current ${metric.toLowerCase()} (last: ${mostRecentValue} on ${formatDateShort(mostRecentDate)})`;
+            
+            // Don't save the pre-filled value to localStorage
+            localStorage.removeItem(`weekly-${inputElement.name}`);
+        } else {
+            labelElement.textContent = `current ${metric.toLowerCase()}`;
+            inputElement.value = '';
+        }
+        
+        // Update placeholder to be more specific
+        inputElement.placeholder = getPlaceholderForMetric(metric);
+    } else {
+        clearNorthStarDisplay();
+    }
+}
+
+// Format date for display
+function formatDateShort(dateString) {
+    if (!dateString) return 'never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Get appropriate placeholder based on metric type
+function getPlaceholderForMetric(metric) {
+    const metricLower = metric.toLowerCase();
+    
+    if (metricLower.includes('revenue') || metricLower.includes('cost') || metricLower.includes('mrr')) {
+        return '5000.00';
+    } else if (metricLower.includes('users') || metricLower.includes('commits')) {
+        return '150.0';
+    } else if (metricLower.includes('score') || metricLower.includes('rating')) {
+        return '8.5';
+    } else if (metricLower.includes('percent') || metricLower.includes('rate')) {
+        return '75.5';
+    } else if (metricLower.includes('mg') || metricLower.includes('yield')) {
+        return '0.5';
+    } else {
+        return '0.0';
+    }
+}
+
+// Clear north star display to defaults
+function clearNorthStarDisplay() {
+    const hintElement = document.getElementById('northStarHint');
+    const labelElement = document.getElementById('northStarValueLabel');
+    const inputElement = document.getElementById('northStarValue');
+    
+    hintElement.textContent = 'track the single most important number that represents your core focus and progress during the residency';
+    labelElement.textContent = 'current value';
+    inputElement.placeholder = '0.0';
 }
 
 window.fillTestData = fillTestData;

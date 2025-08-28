@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Updates Dashboard</title>
+    <script src="server/config.js"></script>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/form.css">
+    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/updates.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <!-- Editor.js CDN for rendering formatted updates -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+    <!-- Chart.js for north star metric visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="brand-title">Weekly Updates</span>
+            </div>
+            <div class="nav-account">
+                <div class="account-selector">
+                    <label for="dashboardUser">Account:</label>
+                    <select class="account-select" id="dashboardUser">
+                        <option value="">Select account...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="header">
+                <h1>weekly updates <em>dashboard</em></h1>
+                <p>view your <em>progress</em> and <em>achievements</em> over time</p>
+            </div>
+            <div class="dashboard-actions">
+                <a href="/weekly-update.html" class="btn btn-primary">New Weekly Update</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Content -->
+    <section class="dashboard-content">
+        <div class="container">
+            <div id="dashboardLoading" class="simple-loading">
+                <div class="spinner"></div>
+                <p>Loading updates...</p>
+            </div>
+            
+            <div id="dashboardError" class="error-message">
+                <p>Failed to load updates. Please try again.</p>
+            </div>
+
+            <div id="dashboardEmpty" class="empty-state">
+                <h3>No Updates Found</h3>
+                <p>This user hasn't created any weekly updates yet.</p>
+                <a href="/weekly-update.html" class="btn btn-primary">Create First Update</a>
+            </div>
+
+            <!-- North Star Metric Chart -->
+            <div id="northStarChartContainer" class="chart-container" style="display: none;">
+                <h3 class="chart-title">North Star Progress</h3>
+                <div class="chart-wrapper">
+                    <canvas id="northStarChart"></canvas>
+                </div>
+            </div>
+
+            <div id="dashboardUpdates" class="dashboard-updates">
+                <!-- Updates will be populated here -->
+            </div>
+        </div>
+    </section>
+
+    <script src="js/user-session.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

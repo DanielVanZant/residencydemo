@@ -151,7 +151,7 @@ router.post('/generate-formatted-update', async (req, res) => {
 router.post('/save-weekly-update', async (req, res) => {
     console.log('Received save-weekly-update request');
     try {
-        const { username, weekDate, bulletPointsJson, formattedUpdates } = req.body;
+        const { username, weekDate, bulletPointsJson, formattedUpdates, northStarValue, northStarNote } = req.body;
         
         if (!username || !weekDate || !bulletPointsJson) {
             return res.status(400).json({ error: 'Missing required fields: username, weekDate, bulletPointsJson' });
@@ -161,7 +161,7 @@ router.post('/save-weekly-update', async (req, res) => {
         
         // Get database instance from app locals
         const db = req.app.locals.db;
-        const result = await db.saveWeeklyUpdate(username, weekDate, bulletPointsJson, formattedUpdates || {});
+        const result = await db.saveWeeklyUpdate(username, weekDate, bulletPointsJson, formattedUpdates || {}, northStarValue, northStarNote);
         
         console.log('Weekly update saved successfully:', result);
         res.json(result);
@@ -238,6 +238,39 @@ router.get('/users', async (req, res) => {
         res.json({ users });
     } catch (error) {
         console.error('Error getting users:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get specific user's north star metric info
+router.get('/user/:username/north-star', async (req, res) => {
+    console.log('Received get user north star request');
+    try {
+        const { username } = req.params;
+        
+        if (!username) {
+            return res.status(400).json({ error: 'Username required' });
+        }
+        
+        console.log(`Getting north star info for user: ${username}`);
+        
+        // Get database instance from app locals
+        const db = req.app.locals.db;
+        const user = await db.getOrCreateUser(username);
+        
+        // Also get the most recent north star value
+        const recentValue = await db.getMostRecentNorthStarValue(username);
+        
+        res.json({ 
+            northStarMetric: user.north_star_metric,
+            northStarDescription: user.north_star_description,
+            mostRecentValue: recentValue.north_star_value,
+            mostRecentNote: recentValue.north_star_note,
+            mostRecentDate: recentValue.week_date
+        });
+        
+    } catch (error) {
+        console.error('Error getting user north star:', error);
         res.status(500).json({ error: error.message });
     }
 });

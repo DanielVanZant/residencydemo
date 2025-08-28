@@ -20,11 +20,38 @@ class Database {
     }
 
     createTables() {
+        // Add north star columns to existing tables if they don't exist
+        this.db.run(`ALTER TABLE users ADD COLUMN north_star_metric TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding north_star_metric column:', err);
+            }
+        });
+        
+        this.db.run(`ALTER TABLE users ADD COLUMN north_star_description TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding north_star_description column:', err);
+            }
+        });
+        
+        this.db.run(`ALTER TABLE weekly_updates ADD COLUMN north_star_value TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding north_star_value column:', err);
+            }
+        });
+        
+        this.db.run(`ALTER TABLE weekly_updates ADD COLUMN north_star_note TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error adding north_star_note column:', err);
+            }
+        });
+
         // Users table for simple user management
         this.db.run(`
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
+                north_star_metric TEXT,
+                north_star_description TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -36,6 +63,8 @@ class Database {
                 user_id INTEGER,
                 week_date DATE NOT NULL,
                 bullet_points_json TEXT NOT NULL,
+                north_star_value TEXT,
+                north_star_note TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id),
@@ -57,6 +86,13 @@ class Database {
         `);
 
         console.log('Database tables created/verified');
+        
+        // Initialize example north star metrics
+        setTimeout(() => {
+            this.initializeExampleNorthStars().catch(err => {
+                console.error('Error initializing north star metrics:', err);
+            });
+        }, 100);
     }
 
     // Get or create user by username
@@ -86,7 +122,7 @@ class Database {
     }
 
     // Save weekly update with formatted versions
-    async saveWeeklyUpdate(username, weekDate, bulletPointsJson, formattedUpdates) {
+    async saveWeeklyUpdate(username, weekDate, bulletPointsJson, formattedUpdates, northStarValue, northStarNote) {
         try {
             const user = await this.getOrCreateUser(username);
             const db = this.db; // Store reference to avoid context issues
@@ -97,9 +133,9 @@ class Database {
                     
                     // Insert or update weekly update
                     db.run(`
-                        INSERT OR REPLACE INTO weekly_updates (user_id, week_date, bullet_points_json, updated_at)
-                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                    `, [user.id, weekDate, bulletPointsJson], function(err) {
+                        INSERT OR REPLACE INTO weekly_updates (user_id, week_date, bullet_points_json, north_star_value, north_star_note, updated_at)
+                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    `, [user.id, weekDate, bulletPointsJson, northStarValue, northStarNote], function(err) {
                         if (err) {
                             db.run('ROLLBACK');
                             reject(err);
@@ -154,9 +190,11 @@ class Database {
         return new Promise((resolve, reject) => {
             this.db.all(`
                 SELECT wu.*, 
+                       u.north_star_metric,
                        GROUP_CONCAT(fu.privacy_level || '::JSON::' || fu.content_json, '|||SEPARATOR|||') as formatted_updates
                 FROM weekly_updates wu
                 LEFT JOIN formatted_updates fu ON wu.id = fu.weekly_update_id
+                LEFT JOIN users u ON wu.user_id = u.id
                 WHERE wu.user_id = ?
                 GROUP BY wu.id
                 ORDER BY wu.week_date DESC
@@ -172,6 +210,9 @@ class Database {
                     weekDate: row.week_date,
                     bulletPoints: JSON.parse(row.bullet_points_json),
                     formattedUpdates: this.parseFormattedUpdates(row.formatted_updates),
+                    northStarValue: row.north_star_value,
+                    northStarNote: row.north_star_note,
+                    northStarMetric: row.north_star_metric,
                     createdAt: row.created_at,
                     updatedAt: row.updated_at
                 }));
@@ -245,7 +286,7 @@ class Database {
     // Get all users for dropdown
     async getAllUsers() {
         return new Promise((resolve, reject) => {
-            this.db.all('SELECT username FROM users ORDER BY username', [], (err, rows) => {
+            this.db.all('SELECT username, north_star_metric, north_star_description FROM users ORDER BY username', [], (err, rows) => {
                 if (err) {
                     reject(err);
                     return;
@@ -253,6 +294,65 @@ class Database {
                 resolve(rows);
             });
         });
+    }
+
+    // Update user's north star metric
+    async updateUserNorthStar(username, metric, description) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`
+                UPDATE users 
+                SET north_star_metric = ?, north_star_description = ? 
+                WHERE username = ?
+            `, [metric, description, username], function(err) {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve({ changes: this.changes });
+            });
+        });
+    }
+
+    // Get user's most recent north star value
+    async getMostRecentNorthStarValue(username) {
+        const user = await this.getOrCreateUser(username);
+        
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT north_star_value, north_star_note, week_date
+                FROM weekly_updates 
+                WHERE user_id = ? AND north_star_value IS NOT NULL
+                ORDER BY week_date DESC
+                LIMIT 1
+            `, [user.id], (err, row) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(row || { north_star_value: null, north_star_note: null, week_date: null });
+            });
+        });
+    }
+
+    // Initialize example north star metrics for existing users
+    async initializeExampleNorthStars() {
+        const exampleMetrics = [
+            { username: 'ada-lovelace', metric: 'Algorithms Documented', description: 'Number of computational algorithms fully documented and proven' },
+            { username: 'leonardo-davinci', metric: 'Inventions Prototyped', description: 'Number of mechanical inventions designed and prototyped' },
+            { username: 'steve-wozniak', metric: 'Circuit Boards Completed', description: 'Number of working circuit board designs completed and tested' },
+            { username: 'marie-curie', metric: 'Radium Yield (mg)', description: 'Milligrams of radium successfully isolated from ore' }
+        ];
+
+        for (const { username, metric, description } of exampleMetrics) {
+            try {
+                // Create user if they don't exist, then update north star
+                await this.getOrCreateUser(username);
+                await this.updateUserNorthStar(username, metric, description);
+                console.log(`Set north star for ${username}: ${metric}`);
+            } catch (error) {
+                console.error(`Error setting north star for ${username}:`, error);
+            }
+        }
     }
 
     close() {
