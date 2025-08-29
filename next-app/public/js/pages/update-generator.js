@@ -49,8 +49,7 @@ class UpdateGenerator {
                 const response = await fetch(this.getEndpoint(), {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': API_CONFIG?.ANTHROPIC_API_KEY || ''
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData),
                     signal: controller.signal
@@ -135,9 +134,7 @@ class UpdateGenerator {
 
     // Get API endpoint
     getEndpoint() {
-        return (typeof API_CONFIG !== 'undefined' && API_CONFIG.API_BASE_URL) 
-            ? `${API_CONFIG.API_BASE_URL}/api/generate-formatted-update`
-            : '/api/generate-formatted-update';
+        return '/api/generate-formatted-update';
     }
 
 

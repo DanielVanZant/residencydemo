@@ -1,21 +1,14 @@
 // API communication module
 class ApiClient {
     constructor() {
-        // API configuration check
-        this.hasValidConfig = () => {
-            return typeof API_CONFIG !== 'undefined' && 
-                   API_CONFIG.ANTHROPIC_API_KEY && 
-                   API_CONFIG.ANTHROPIC_API_KEY !== 'your-anthropic-api-key-here';
-        };
+        // No API configuration needed - using Next.js API routes
     }
 
     async callClaudeAPI(formData) {
         console.log('callClaudeAPI called with:', formData);
         
-        // Try to use local server first, fallback to config if available
-        const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? '/api/extract-bullets'
-            : 'http://localhost:3000/api/extract-bullets';
+        // Use Next.js API route
+        const endpoint = '/api/extract-bullets';
 
         console.log('Using endpoint:', endpoint);
 
@@ -25,9 +18,7 @@ class ApiClient {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    // Send API key in header if using config
-                    'x-api-key': API_CONFIG?.ANTHROPIC_API_KEY || ''
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ formData })
             });
@@ -77,11 +68,10 @@ class ApiClient {
         return Object.values(formData).some(value => value.trim() !== '');
     }
 
-    // Check if API configuration is valid
+    // API configuration check no longer needed
     checkApiConfig() {
-        if (!this.hasValidConfig()) {
-            throw new Error('Please configure your Anthropic API key in config.js');
-        }
+        // API key is handled by Next.js environment variables
+        return true;
     }
 }
 

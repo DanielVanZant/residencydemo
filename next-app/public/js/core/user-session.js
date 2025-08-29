@@ -65,10 +65,7 @@ class UserSession {
     // Populate user dropdown from API
     async populateUserDropdown(selectElementId, callback = null) {
         try {
-            const apiUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.API_BASE_URL) 
-                ? `${API_CONFIG.API_BASE_URL}/api/users`
-                : '/api/users';
-            const response = await fetch(apiUrl);
+            const response = await fetch('/api/users');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

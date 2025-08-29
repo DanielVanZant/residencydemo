@@ -38,7 +38,7 @@ export default function HomePage() {
     
     try {
       console.log('Loading all users...')
-      const response = await fetch('http://localhost:3000/api/users')
+      const response = await fetch('/api/users')
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

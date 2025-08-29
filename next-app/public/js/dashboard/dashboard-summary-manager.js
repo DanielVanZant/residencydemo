@@ -10,10 +10,7 @@ class DashboardSummaryManager {
     async loadUserSummaries(username) {
         try {
             console.log(`Loading summaries for user: ${username}`);
-            const apiUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.API_BASE_URL) 
-                ? `${API_CONFIG.API_BASE_URL}/api/user-summaries/${username}`
-                : `/api/user-summaries/${username}`;
-            const response = await fetch(apiUrl);
+            const response = await fetch(`/api/user-summaries/${username}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

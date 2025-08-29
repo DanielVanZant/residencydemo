@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Update Dashboard</title>
+    <script src="server/config.js"></script>
+    <link rel="stylesheet" href="css/core/variables.css">
+    <link rel="stylesheet" href="css/core/base.css">
+    <link rel="stylesheet" href="css/core/layout.css">
+    <link rel="stylesheet" href="css/core/navigation.css">
+    <link rel="stylesheet" href="css/pages/form.css">
+    <link rel="stylesheet" href="css/pages/editor.css">
+    <link rel="stylesheet" href="css/pages/updates.css">
+    <link rel="stylesheet" href="css/core/animations.css">
+    <!-- Editor.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="http://localhost:3001" class="brand-title" style="text-decoration: none; color: inherit;">Weekly Updates</a>
+            </div>
+            <div class="nav-account">
+                <div class="account-selector">
+                    <label for="username">Account:</label>
+                    <select class="account-select" id="username">
+                        <option value="">Select account...</option>
+                    </select>
+                </div>
+                <div class="nav-links">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="header">
+                <h1><em>weekly</em> update</h1>
+                <p>share your <em>progress</em>, <em>challenges</em>, and wins</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-wrapper">
+        <div class="container">
+            <div class="update-form">
+            <div class="date-header">
+                <div class="date-section">
+                    <h2><span class="italic">Week</span> of:</h2>
+                    <input type="date" class="date-input" id="weekDate">
+                </div>
+            </div>
+
+            <form id="updateForm">
+                <!-- North Star Section -->
+                <div class="north-star-section">
+                    <h3 class="north-star-title">your <em>north star</em> metric</h3>
+                    <div class="north-star-hint" id="northStarHint">track the single most important number that represents your core focus and progress during the residency</div>
+                    <div class="north-star-inputs">
+                        <div class="north-star-value">
+                            <label for="northStarValue" id="northStarValueLabel">current value</label>
+                            <input type="number" step="any" class="north-star-input" id="northStarValue" name="northStarValue" placeholder="0.0">
+                        </div>
+                        <div class="north-star-note">
+                            <label for="northStarNote">context & reflection</label>
+                            <textarea class="north-star-textarea" id="northStarNote" name="northStarNote" placeholder="Brief note about this week's change, what influenced it, and what it means for your progress..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">what did you <span class="emphasis">accomplish</span> this week?</label>
+                    <div class="question-hint">list your key achievements, completed tasks, and milestones reached</div>
+                    <textarea class="answer-input" name="accomplishments" placeholder="Example: Completed MVP features, onboarded 3 new customers, fixed critical bug in payment system..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">what are your <span class="emphasis">priorities</span> for next week?</label>
+                    <div class="question-hint">outline your top 3-5 goals and tasks for the upcoming week</div>
+                    <textarea class="answer-input" name="priorities" placeholder="Example: Launch beta version, conduct user interviews, optimize database queries..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">what <span class="emphasis">challenges</span> are you facing?</label>
+                    <div class="question-hint">describe any blockers, difficulties, or areas where you need help</div>
+                    <textarea class="answer-input" name="challenges" placeholder="Example: Integration issues with third-party API, need design feedback, struggling with time management..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label">key <span class="emphasis">metrics</span> and data points</label>
+                    <div class="question-hint">share important numbers: users, revenue, engagement, experiments, etc.</div>
+                    <textarea class="answer-input" name="metrics" placeholder="Example: 150 active users (+25%), $5K MRR, 68% retention rate, A/B test showed 15% improvement..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">learnings</span> and insights</label>
+                    <div class="question-hint">what did you learn? any surprising discoveries or pivotal realizations?</div>
+                    <textarea class="answer-input" name="learnings" placeholder="Example: Users prefer mobile experience, pricing model needs adjustment, automation saved 10 hours/week..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">wins</span> and celebrations</label>
+                    <div class="question-hint">highlight positive moments, team achievements, or personal victories</div>
+                    <textarea class="answer-input" name="wins" placeholder="Example: First paying customer, team member's great contribution, positive user feedback..."></textarea>
+                </div>
+
+                <div class="question-section">
+                    <label class="question-label"><span class="emphasis">support</span> needed</label>
+                    <div class="question-hint">what resources, introductions, or assistance would help you move faster?</div>
+                    <textarea class="answer-input" name="support" placeholder="Example: Introduction to potential advisor, feedback on pitch deck, technical expertise in ML..."></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-primary" id="extractBullets">Extract Bullet Points</button>
+                </div>
+            </form>
+
+            <div class="loading-spinner" id="loadingSpinner"></div>
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="bullets-section" id="bulletsSection">
+                <div class="bullets-header-controls">
+                    <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
+                    <div class="edit-controls">
+                    </div>
+                </div>
+                
+                <div id="bulletsContainer" class="bullets-container">
+                    <!-- Extracted bullets will be displayed here -->
+                </div>
+                
+                <div id="editorjs" class="roam-editor"></div>
+                
+                <div class="editor-help">
+                    <strong>Tips:</strong> Click anywhere to edit • Enter for new bullet • Tab to indent • Shift+Tab to outdent • Drag to reorder
+                    <br>
+                    <small>Check/uncheck items to control what gets included in your published update</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Formatted Updates Section -->
+    <section id="formattedUpdatesSection" class="formatted-updates-section">
+        <div class="container">
+            <div class="updates-header">
+                <div class="updates-header-controls">
+                    <div class="updates-header-text">
+                        <h2 class="updates-title"><span class="italic">formatted</span> updates</h2>
+                        <p class="updates-subtitle">Published update and internal notes based on your selections</p>
+                    </div>
+                    <div class="updates-controls">
+                        <button type="button" class="btn btn-primary btn-small" id="regenerateUpdates">Regenerate Updates</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="formattedUpdates" class="formatted-updates-container">
+                <!-- Updates will be dynamically inserted here -->
+            </div>
+            
+            <div id="updatesLoading" class="simple-loading">
+                <div class="spinner"></div>
+                <p>Generating formatted updates...</p>
+            </div>
+            
+            <div id="updatesError" class="error-message">
+                <p>Failed to generate formatted updates. Please try again.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final Submit Section -->
+    <section class="submit-section" id="submitSection">
+        <div class="container">
+            <div class="submit-container">
+                <button type="button" class="btn btn-success btn-large" id="saveChanges">Submit Weekly Update</button>
+                <p class="submit-help">Review everything above, then submit to save your weekly update to the database.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module scripts -->
+    <!-- Core modules -->
+    <script src="js/core/user-session.js"></script>
+    <script src="js/core/api-client.js"></script>
+    <script src="js/pages/editor-utils.js"></script>
+    <script src="js/pages/update-generator.js"></script>
+    
+    <!-- UI utilities -->
+    <script src="js/core/ui-utils.js"></script>
+    
+    <!-- Weekly Update System (consolidated form management) -->
+    <script src="js/forms/weekly-update-system.js"></script>
+    <script>
+        // Debug: Check what's loaded after page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded. Checking for Editor.js tools...');
+            console.log('window.EditorJS:', typeof window.EditorJS);
+            console.log('window.List:', typeof window.List);
+            console.log('window.EditorjsList:', typeof window.EditorjsList);
+            console.log('window.EditorjsChecklist:', typeof window.EditorjsChecklist);
+            console.log('window.Checklist:', typeof window.Checklist);
+            
+            // Check if List is available on window after a delay
+            setTimeout(() => {
+                console.log('After delay - window.List:', typeof window.List);
+                
+                // Check all window properties that might be the List tool
+                const possibleNames = Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('list') || 
+                    k.toLowerCase().includes('editorjs')
+                );
+                console.log('Possible List tool names:', possibleNames);
+                
+                // Test Editor.js initialization
+                if (window.EditorjsList && window.EditorJS) {
+                    console.log('Both EditorJS and EditorjsList loaded successfully');
+                    console.log('EditorjsList:', window.EditorjsList);
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

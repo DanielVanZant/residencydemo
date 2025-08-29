@@ -107,10 +107,7 @@ class Dashboard {
 
         try {
             console.log(`Loading updates for user: ${username}`);
-            const apiUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.API_BASE_URL) 
-                ? `${API_CONFIG.API_BASE_URL}/api/user-updates/${username}`
-                : `/api/user-updates/${username}`;
-            const response = await fetch(apiUrl);
+            const response = await fetch(`/api/user-updates/${username}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

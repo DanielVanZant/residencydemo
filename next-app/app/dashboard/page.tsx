@@ -12,7 +12,6 @@ export default function DashboardPage() {
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="beforeInteractive" />
-      <Script src="/server/config.js" strategy="beforeInteractive" />
 
       {/* Top Navigation */}
       <nav className="top-nav">

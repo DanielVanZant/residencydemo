@@ -12,7 +12,6 @@ export default function WeeklyUpdatePage() {
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest" strategy="beforeInteractive" />
-      <Script src="/server/config.js" strategy="beforeInteractive" />
 
       {/* Top Navigation */}
       <nav className="top-nav">
