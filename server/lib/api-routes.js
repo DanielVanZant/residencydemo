@@ -13,12 +13,18 @@ router.post('/extract-bullets', async (req, res) => {
         // Get API key from environment or request
         const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
         
+        console.log('API key available:', !!apiKey);
+        console.log('API key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
+        
         if (!apiKey) {
+            console.log('ERROR: No API key found');
             return res.status(401).json({ error: 'API key required' });
         }
 
         const anthropicClient = new AnthropicClient(apiKey);
+        console.log('Calling Anthropic API...');
         const response = await anthropicClient.extractBullets(formData);
+        console.log('Anthropic API response received');
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -69,6 +75,23 @@ router.post('/extract-bullets', async (req, res) => {
         }
     } catch (error) {
         console.error('Server error:', error);
+        
+        // Check for specific error types and provide better messages
+        if (error.code === 'ETIMEDOUT' || error.errno === 'ETIMEDOUT') {
+            return res.status(503).json({ 
+                error: 'The AI service is temporarily unavailable. Please wait a moment and try again.',
+                details: 'Network timeout when connecting to Anthropic API'
+            });
+        }
+        
+        if (error.code === 'ECONNRESET') {
+            return res.status(503).json({ 
+                error: 'Connection to AI service was interrupted. Please try again.',
+                details: 'Connection reset by Anthropic API'
+            });
+        }
+        
+        // Default error response
         res.status(500).json({ error: error.message });
     }
 });

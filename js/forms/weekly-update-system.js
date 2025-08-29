@@ -38,7 +38,7 @@ class FormManager {
         const formData = new FormData(this.form);
         const data = {};
         
-        for (let [key, value] = formData.entries()) {
+        for (let [key, value] of formData.entries()) {
             data[key] = value;
         }
         
@@ -188,7 +188,7 @@ class WeeklyUpdateApp {
 
     async init() {
         // Initialize user session and populate dropdown
-        const savedUser = await window.userSession.populateUserDropdown('userSelect', async (selectedUser) => {
+        const savedUser = await window.userSession.populateUserDropdown('username', async (selectedUser) => {
             if (selectedUser) {
                 await this.northStarManager.loadUserNorthStar(selectedUser);
             } else {
@@ -217,20 +217,78 @@ class WeeklyUpdateApp {
         if (saveButton) {
             saveButton.addEventListener('click', () => this.saveChanges());
         }
+
+        // Regenerate updates button
+        const regenerateButton = document.getElementById('regenerateUpdates');
+        if (regenerateButton) {
+            regenerateButton.addEventListener('click', () => this.regenerateUpdates());
+        }
     }
 
     // Initialize Editor.js
     initializeEditor() {
+        console.log('Initializing Editor.js...');
+        console.log('EditorJS available:', typeof EditorJS !== 'undefined');
+        
         if (typeof EditorJS !== 'undefined') {
-            this.editor = new EditorJS({
+            // Check for Editor.js plugins with their actual global names
+            const tools = {};
+            
+            console.log('Checking for Editor.js tools:');
+            console.log('- window.Header:', typeof window.Header !== 'undefined');
+            console.log('- window.List:', typeof window.List !== 'undefined');
+            console.log('- window.EditorjsList:', typeof window.EditorjsList !== 'undefined');
+            console.log('- window.Checklist:', typeof window.Checklist !== 'undefined');
+            console.log('- window.EditorjsChecklist:', typeof window.EditorjsChecklist !== 'undefined');
+            
+            if (typeof window.Header !== 'undefined') {
+                tools.header = window.Header;
+                console.log('Added Header tool');
+            }
+            
+            if (typeof window.List !== 'undefined') {
+                tools.list = window.List;
+                console.log('Added List tool (window.List)');
+            } else if (typeof window.EditorjsList !== 'undefined') {
+                tools.list = window.EditorjsList;
+                console.log('Added List tool (window.EditorjsList)');
+            }
+            
+            if (typeof window.Checklist !== 'undefined') {
+                tools.checklist = window.Checklist;
+                console.log('Added Checklist tool (window.Checklist)');
+            } else if (typeof window.EditorjsChecklist !== 'undefined') {
+                tools.checklist = window.EditorjsChecklist;
+                console.log('Added Checklist tool (window.EditorjsChecklist)');
+            }
+            
+            console.log('Final tools object:', tools);
+            
+            // Editor.js handles paragraphs by default, but let's ensure tools are properly configured
+            const editorConfig = {
                 holder: 'editorjs',
-                tools: {
-                    header: Header,
-                    list: List,
-                    checklist: Checklist
+                placeholder: 'Start writing your weekly update...',
+                onReady: () => {
+                    console.log('Editor.js is ready!');
                 },
-                placeholder: 'Start writing your weekly update...'
-            });
+                onChange: () => {
+                    console.log('Editor content changed');
+                },
+                data: {
+                    blocks: []
+                }
+            };
+            
+            // Only add tools if we have them
+            if (Object.keys(tools).length > 0) {
+                editorConfig.tools = tools;
+            }
+            
+            console.log('Editor config:', editorConfig);
+            
+            this.editor = new EditorJS(editorConfig);
+        } else {
+            console.error('EditorJS not available!');
         }
     }
 
@@ -253,16 +311,28 @@ class WeeklyUpdateApp {
                 editorData = await this.editor.save();
             }
 
-            // Prepare request data
+            // Prepare request data (server expects formData wrapper)
+            // Include all form field content in addition to editor data
             const requestData = {
-                rawUpdate: formData.rawUpdate || '',
-                editorData: editorData,
-                northStar: this.northStarManager.getCurrentValues()
+                formData: {
+                    rawUpdate: formData.rawUpdate || '',
+                    editorData: editorData,
+                    northStar: this.northStarManager.getCurrentValues(),
+                    username: username,
+                    // Include all form textarea content
+                    accomplishments: formData.accomplishments || '',
+                    priorities: formData.priorities || '',
+                    challenges: formData.challenges || '',
+                    metrics: formData.metrics || '',
+                    learnings: formData.learnings || '',
+                    wins: formData.wins || '',
+                    support: formData.support || ''
+                }
             };
 
             console.log('Sending extract request:', requestData);
 
-            const response = await fetch(`/api/extract-bullets/${username}`, {
+            const response = await fetch('/api/extract-bullets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -271,13 +341,46 @@ class WeeklyUpdateApp {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                
+                // Handle 503 Service Unavailable specifically
+                if (response.status === 503) {
+                    throw new Error(errorData.error || 'The AI service is temporarily unavailable. Please wait a moment and try again.');
+                }
+                
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
             console.log('Extract response:', data);
             
-            this.displayBullets(data.bullets);
+            // Use the existing EditorUtils displayBullets function
+            if (window.EditorUtils) {
+                const editorUtils = new window.EditorUtils();
+                
+                if (data.editorBlock) {
+                    await editorUtils.displayBullets(data.editorBlock, window.privacyManager);
+                } else if (data.markdown) {
+                    await editorUtils.displayBullets(data.markdown, window.privacyManager);
+                } else if (data.bullets) {
+                    // Convert bullet array to markdown for compatibility
+                    const markdown = data.bullets.join('\n');
+                    await editorUtils.displayBullets(markdown, window.privacyManager);
+                } else {
+                    console.error('Unknown response format:', data);
+                    window.uiUtils.showError('Unexpected response format from server');
+                }
+                
+                // Show the bullets section and submit section
+                document.getElementById('bulletsSection').classList.add('active');
+                const submitSection = document.querySelector('.submit-section');
+                if (submitSection) {
+                    submitSection.classList.add('active');
+                }
+            } else {
+                console.error('EditorUtils not available');
+                window.uiUtils.showError('Editor utilities not loaded');
+            }
             
         } catch (error) {
             console.error('Error extracting bullets:', error);
@@ -287,28 +390,6 @@ class WeeklyUpdateApp {
         }
     }
 
-    // Display extracted bullets
-    displayBullets(bullets) {
-        const bulletsSection = document.getElementById('bulletsSection');
-        const bulletsContainer = document.getElementById('bulletsContainer');
-        
-        if (!bullets || !bullets.length) {
-            window.uiUtils.showError('No bullets were extracted. Please add more content to your update.');
-            return;
-        }
-
-        bulletsContainer.innerHTML = bullets.map(bullet => 
-            `<div class="bullet-item">${bullet}</div>`
-        ).join('');
-        
-        bulletsSection.classList.add('active');
-        
-        // Show submit section
-        const submitSection = document.querySelector('.submit-section');
-        if (submitSection) {
-            submitSection.classList.add('active');
-        }
-    }
 
     // Save changes to database
     async saveChanges() {
@@ -318,30 +399,55 @@ class WeeklyUpdateApp {
             window.uiUtils.hideError();
 
             const { username, weekDate } = this.formManager.getSaveMetadata();
-            const formData = this.formManager.getFormData();
+            const northStarValues = this.northStarManager.getCurrentValues();
 
-            // Get editor content
-            let editorData = null;
-            if (this.editor) {
-                editorData = await this.editor.save();
+            // Get bullet editor data from EditorUtils
+            let bulletPointsJson = null;
+            if (window.bulletEditor) {
+                const bulletData = await window.bulletEditor.save();
+                // The server expects the list block data as a JSON string
+                if (bulletData && bulletData.blocks && bulletData.blocks.length > 0) {
+                    const listBlock = bulletData.blocks.find(block => block.type === 'list');
+                    if (listBlock && listBlock.data) {
+                        bulletPointsJson = JSON.stringify(listBlock.data);
+                    }
+                }
             }
 
-            // Get extracted bullets from the display
-            const bulletElements = document.querySelectorAll('.bullet-item');
-            const bullets = Array.from(bulletElements).map(el => el.textContent);
+            if (!bulletPointsJson) {
+                throw new Error('No bullet points to save. Please extract bullets first.');
+            }
 
-            // Prepare save data
+            // Get formatted updates from UpdateGenerator if available
+            let formattedUpdates = {};
+            if (window.updateGenerator && window.updateGenerator.updateEditors) {
+                try {
+                    if (window.updateGenerator.updateEditors.published) {
+                        const publishedData = await window.updateGenerator.updateEditors.published.save();
+                        formattedUpdates.published = publishedData;
+                    }
+                    if (window.updateGenerator.updateEditors.internal) {
+                        const internalData = await window.updateGenerator.updateEditors.internal.save();
+                        formattedUpdates.internal = internalData;
+                    }
+                } catch (err) {
+                    console.warn('Could not get formatted updates:', err);
+                }
+            }
+
+            // Prepare save data matching server expectations
             const saveData = {
-                weekDate,
-                rawUpdate: formData.rawUpdate || '',
-                editorData: editorData,
-                bullets: bullets,
-                northStar: this.northStarManager.getCurrentValues()
+                username: username,
+                weekDate: weekDate,
+                bulletPointsJson: bulletPointsJson,
+                formattedUpdates: formattedUpdates,
+                northStarValue: northStarValues.value,
+                northStarNote: northStarValues.note
             };
 
             console.log('Saving update:', saveData);
 
-            const response = await fetch(`/api/save-update/${username}`, {
+            const response = await fetch('/api/save-weekly-update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -359,6 +465,27 @@ class WeeklyUpdateApp {
             // Clear auto-saved data after successful save
             this.formManager.clearAutoSavedData();
             
+            // Generate updated summaries in the background
+            try {
+                console.log('Generating updated user summaries...');
+                const summaryResponse = await fetch('/api/generate-user-summaries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+                
+                if (summaryResponse.ok) {
+                    console.log('User summaries updated successfully');
+                } else {
+                    console.warn('Failed to generate summaries, but update was saved');
+                }
+            } catch (summaryError) {
+                console.warn('Error generating summaries:', summaryError);
+                // Don't fail the whole save if summary generation fails
+            }
+            
             // Show success message and redirect
             window.uiUtils.showSuccessMessage(
                 'Update saved successfully! Redirecting to dashboard...',
@@ -374,6 +501,17 @@ class WeeklyUpdateApp {
             window.uiUtils.showLoading(false);
         }
     }
+
+    // Regenerate the formatted updates
+    async regenerateUpdates() {
+        try {
+            // Re-extract bullets which should trigger update generation
+            await this.extractBullets();
+        } catch (error) {
+            console.error('Error regenerating updates:', error);
+            window.uiUtils.showError(`Error regenerating updates: ${error.message}`);
+        }
+    }
 }
 
 // Export classes for global use
@@ -384,4 +522,12 @@ window.WeeklyUpdateApp = WeeklyUpdateApp;
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.weeklyUpdateApp = new WeeklyUpdateApp();
+    
+    // Initialize UpdateGenerator for formatted updates
+    if (window.UpdateGenerator) {
+        window.updateGenerator = new window.UpdateGenerator();
+        console.log('UpdateGenerator initialized');
+    } else {
+        console.error('UpdateGenerator class not available');
+    }
 });

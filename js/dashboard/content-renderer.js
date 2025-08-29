@@ -18,7 +18,7 @@ class ContentRenderer {
             container.innerHTML = html;
         } else if (typeof updateData === 'string') {
             // Render as simple text with paragraph wrapping
-            const paragraphs = updateData.split('\\n\\n').filter(p => p.trim());
+            const paragraphs = updateData.split('\n\n').filter(p => p.trim());
             container.innerHTML = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
         } else {
             // Fallback to JSON string
@@ -71,17 +71,17 @@ class ContentRenderer {
             .replace(/^## (.*$)/gm, '<h2>$1</h2>')
             .replace(/^# (.*$)/gm, '<h1>$1</h1>')
             // Bold and italic
-            .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-            .replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
             // Line breaks and paragraphs
-            .replace(/\\n\\n/g, '</p><p>')
-            .replace(/\\n/g, '<br>');
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
         
         // Wrap in paragraphs
         html = '<p>' + html + '</p>';
         
         // Clean up empty paragraphs
-        html = html.replace(/<p><\\/p>/g, '').replace(/<p><br>/g, '<p>');
+        html = html.replace(/<p><\/p>/g, '').replace(/<p><br>/g, '<p>');
         
         container.innerHTML = html;
     }

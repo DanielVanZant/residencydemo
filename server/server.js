@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const Database = require('./database');
 const apiRoutes = require('./lib/api-routes');
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,9 +24,9 @@ app.use('/api', apiRoutes);
 
 
 
-// Serve the HTML files
+// Redirect root to Next.js homepage
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'index.html'));
+    res.redirect('http://localhost:3001');
 });
 
 app.get('/weekly-update.html', (req, res) => {

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/core/variables.css">
     <link rel="stylesheet" href="css/core/base.css">
     <link rel="stylesheet" href="css/core/layout.css">
+    <link rel="stylesheet" href="css/core/navigation.css">
     <link rel="stylesheet" href="css/pages/form.css">
     <link rel="stylesheet" href="css/pages/editor.css">
     <link rel="stylesheet" href="css/pages/updates.css">
@@ -120,7 +121,7 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="button" class="btn btn-primary" onclick="extractBullets()">Extract Bullet Points</button>
+                    <button type="button" class="btn btn-primary" id="extractBullets">Extract Bullet Points</button>
                 </div>
             </form>
 
@@ -132,6 +133,10 @@
                     <h2 class="bullets-header"><span class="italic">extracted</span> bullet points</h2>
                     <div class="edit-controls">
                     </div>
+                </div>
+                
+                <div id="bulletsContainer" class="bullets-container">
+                    <!-- Extracted bullets will be displayed here -->
                 </div>
                 
                 <div id="editorjs" class="roam-editor"></div>
@@ -155,7 +160,7 @@
                         <p class="updates-subtitle">Published update and internal notes based on your selections</p>
                     </div>
                     <div class="updates-controls">
-                        <button type="button" class="btn btn-primary btn-small" onclick="regenerateUpdates()">Regenerate Updates</button>
+                        <button type="button" class="btn btn-primary btn-small" id="regenerateUpdates">Regenerate Updates</button>
                     </div>
                 </div>
             </div>
@@ -179,7 +184,7 @@
     <section class="submit-section" id="submitSection">
         <div class="container">
             <div class="submit-container">
-                <button type="button" class="btn btn-success btn-large" onclick="saveChanges()">Submit Weekly Update</button>
+                <button type="button" class="btn btn-success btn-large" id="saveChanges">Submit Weekly Update</button>
                 <p class="submit-help">Review everything above, then submit to save your weekly update to the database.</p>
             </div>
         </div>
