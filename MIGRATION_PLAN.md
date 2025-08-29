@@ -188,10 +188,17 @@ Key implementation details:
 
 **Notes/Issues:**
 ```
-[Space for developer notes - Editor.js integration in Next.js can have SSR issues]
+Key implementation decisions:
+- Used minimal migration approach: served existing HTML as JSX without TypeScript conversion
+- Added API_BASE_URL configuration for cross-port communication (Next.js 3001 → Express 3000)
+- Updated all JavaScript API endpoints to use API_BASE_URL for proper routing
+- Preserved all existing JavaScript files in public/ directory without modification
+- Added initialization scripts to handle timing issues with component loading
+- Fixed UpdateGenerator initialization and API endpoint routing
+- Successfully tested complete workflow: extract bullets → formatted updates
 ```
 
-**Completed**: ❌ **Date**: ______ **Committed**: ❌
+**Completed**: ✅ **Date**: 2025-08-29 **Committed**: ✅ **Commit**: 088ad79
 
 ---
 

@@ -69,7 +69,7 @@ export default function HomePage() {
           </div>
           <div className="nav-account">
             <div className="nav-links">
-              <a href="/weekly-update.html" className="nav-link">New Update</a>
+              <a href="/weekly-update" className="nav-link">New Update</a>
               <a href="/dashboard.html" className="nav-link">Dashboard</a>
             </div>
           </div>
@@ -106,7 +106,7 @@ export default function HomePage() {
             <div className="empty-state">
               <h3>No Summaries Available</h3>
               <p>No user summaries have been generated yet.</p>
-              <a href="http://localhost:3000/weekly-update.html" className="btn btn-primary">Create First Update</a>
+              <a href="/weekly-update" className="btn btn-primary">Create First Update</a>
             </div>
           )}
 
@@ -124,7 +124,7 @@ export default function HomePage() {
                     </div>
                     <div className="user-actions">
                       <a href={`http://localhost:3000/dashboard.html?user=${encodeURIComponent(user.username)}`} className="btn btn-primary">View Dashboard</a>
-                      <a href="http://localhost:3000/weekly-update.html" className="btn btn-secondary">New Update</a>
+                      <a href="/weekly-update" className="btn btn-secondary">New Update</a>
                     </div>
                   </div>
                 </div>
