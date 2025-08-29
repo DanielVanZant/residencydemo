@@ -1,0 +1,5 @@
+[{"id":1,"username":"ada-lovelace","created_at":"2025-08-28 00:12:32","north_star_metric":"Algorithms Documented","north_star_description":"Number of computational algorithms fully documented and proven"},
+{"id":2,"username":"leonardo-davinci","created_at":"2025-08-28 00:12:32","north_star_metric":"Inventions Prototyped","north_star_description":"Number of mechanical inventions designed and prototyped"},
+{"id":3,"username":"marie-curie","created_at":"2025-08-28 00:12:32","north_star_metric":"Radium Yield (mg)","north_star_description":"Milligrams of radium successfully isolated from ore"},
+{"id":4,"username":"steve-wozniak","created_at":"2025-08-28 00:12:32","north_star_metric":"Circuit Boards Completed","north_star_description":"Number of working circuit board designs completed and tested"},
+{"id":5,"username":"true","created_at":"2025-08-28 14:44:32","north_star_metric":null,"north_star_description":null}]

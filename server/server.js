@@ -1,15 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const Database = require('./database');
+const ConvexDatabase = require('./lib/convex-client');
 const apiRoutes = require('./lib/api-routes');
 require('dotenv').config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize database
-const db = new Database();
+// Initialize Convex database
+const db = new ConvexDatabase();
 
 // Middleware
 app.use(cors());

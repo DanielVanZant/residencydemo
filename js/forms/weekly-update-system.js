@@ -275,7 +275,20 @@ class WeeklyUpdateApp {
                     console.log('Editor content changed');
                 },
                 data: {
-                    blocks: []
+                    blocks: [
+                        {
+                            id: "checklist-block",
+                            type: "checklist",
+                            data: {
+                                items: [
+                                    {
+                                        text: "Add your accomplishments here...",
+                                        checked: false
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             };
             
