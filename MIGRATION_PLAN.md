@@ -240,10 +240,19 @@ Key implementation decisions:
 
 **Notes/Issues:**
 ```
-[Space for developer notes - Chart.js and complex rendering logic]
+Key implementation decisions:
+- Used minimal migration approach: served existing dashboard HTML as JSX without TypeScript conversion
+- Added API_BASE_URL support to dashboard.js and dashboard-summary-manager.js for cross-port communication
+- Updated Dashboard class initialization and export for Next.js compatibility
+- Added dashboard.css import to legacy.css for complete styling support
+- Fixed all navigation links throughout app to use /dashboard instead of dashboard.html
+- Fixed weekly update redirect to point to Next.js dashboard route (/dashboard?user=<user>)
+- Preserved all existing JavaScript files in public/js/dashboard/ directory without modification
+- Successfully tested complete workflow: dashboard → weekly update → redirect back to dashboard
+- All Chart.js and complex rendering logic works identically to legacy version
 ```
 
-**Completed**: ❌ **Date**: ______ **Committed**: ❌
+**Completed**: ✅ **Date**: 2025-08-29 **Committed**: ✅ **Commit**: deb5e3b
 
 ---
 
