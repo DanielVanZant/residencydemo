@@ -70,7 +70,7 @@ export default function HomePage() {
           <div className="nav-account">
             <div className="nav-links">
               <a href="/weekly-update" className="nav-link">New Update</a>
-              <a href="/dashboard.html" className="nav-link">Dashboard</a>
+              <a href="/dashboard" className="nav-link">Dashboard</a>
             </div>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="user-actions">
-                      <a href={`http://localhost:3000/dashboard.html?user=${encodeURIComponent(user.username)}`} className="btn btn-primary">View Dashboard</a>
+                      <a href={`/dashboard?user=${encodeURIComponent(user.username)}`} className="btn btn-primary">View Dashboard</a>
                       <a href="/weekly-update" className="btn btn-secondary">New Update</a>
                     </div>
                   </div>

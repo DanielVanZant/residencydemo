@@ -107,7 +107,10 @@ class Dashboard {
 
         try {
             console.log(`Loading updates for user: ${username}`);
-            const response = await fetch(`/api/user-updates/${username}`);
+            const apiUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.API_BASE_URL) 
+                ? `${API_CONFIG.API_BASE_URL}/api/user-updates/${username}`
+                : `/api/user-updates/${username}`;
+            const response = await fetch(apiUrl);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -207,7 +210,13 @@ class Dashboard {
     }
 }
 
-// Initialize dashboard when page loads
+// Export Dashboard class for use in other modules
+window.Dashboard = Dashboard;
+
+// Initialize dashboard when page loads (if not already done)
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new Dashboard();
+    if (!window.dashboardApp) {
+        window.dashboardApp = new Dashboard();
+        console.log('Dashboard initialized via DOMContentLoaded');
+    }
 });

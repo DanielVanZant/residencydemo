@@ -514,7 +514,7 @@ class WeeklyUpdateApp {
             // Show success message and redirect
             window.uiUtils.showSuccessMessage(
                 'Update saved successfully! Redirecting to dashboard...',
-                `dashboard.html?user=${encodeURIComponent(username)}`,
+                `/dashboard?user=${encodeURIComponent(username)}`,
                 2000
             );
             

@@ -28,7 +28,7 @@ export default function WeeklyUpdatePage() {
               </select>
             </div>
             <div className="nav-links">
-              <a href="dashboard.html" className="nav-link">Dashboard</a>
+              <a href="/dashboard" className="nav-link">Dashboard</a>
             </div>
           </div>
         </div>
