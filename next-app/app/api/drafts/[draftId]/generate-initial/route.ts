@@ -42,7 +42,7 @@ export async function POST(
       console.log('Extracting bullets from question responses...');
       const bulletResponse = await anthropicClient.extractBullets(formData);
       
-      if (!bulletResponse.ok) {
+      if (!bulletResponse?.ok) {
         throw new Error(`Failed to extract bullets: ${bulletResponse.status}`);
       }
       

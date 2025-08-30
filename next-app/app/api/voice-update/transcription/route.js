@@ -1,6 +1,15 @@
 // Handle Twilio transcription callbacks
 import { NextRequest, NextResponse } from 'next/server';
-import { storeTranscription } from '../route.js';
+
+// Simple in-memory transcription storage (use Redis/DB in production)
+const transcriptions = new Map();
+
+function storeTranscription(callSid, recordingSid, text) {
+  if (!transcriptions.has(callSid)) {
+    transcriptions.set(callSid, new Map());
+  }
+  transcriptions.get(callSid).set(recordingSid, text);
+}
 
 export async function POST(request) {
   try {
@@ -11,7 +20,7 @@ export async function POST(request) {
     
     console.log('Transcription received:', { transcriptionText, recordingSid, callSid });
     
-    // Store transcription using shared storage
+    // Store transcription using local storage
     storeTranscription(callSid, recordingSid, transcriptionText);
     
     return new NextResponse('OK');
