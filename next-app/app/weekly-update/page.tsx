@@ -49,68 +49,83 @@ export default function WeeklyUpdatePage() {
           <div className="update-form">
             <div className="date-header">
               <div className="date-section">
-                <h2><span className="italic">Week</span> of:</h2>
-                <input type="date" className="date-input" id="weekDate" />
+                <h2><span className="italic">Update</span> date:</h2>
+                <input type="date" className="date-input" id="weekDate" defaultValue={new Date().toISOString().split('T')[0]} />
               </div>
             </div>
 
             <form id="updateForm">
-              {/* North Star Section */}
-              <div className="north-star-section">
-                <h3 className="north-star-title">your <em>north star</em> metric</h3>
-                <div className="north-star-hint" id="northStarHint">track the single most important number that represents your core focus and progress during the residency</div>
-                <div className="north-star-inputs">
-                  <div className="north-star-value">
-                    <label htmlFor="northStarValue" id="northStarValueLabel">current value</label>
-                    <input type="number" step="any" className="north-star-input" id="northStarValue" name="northStarValue" placeholder="0.0" />
-                  </div>
-                  <div className="north-star-note">
-                    <label htmlFor="northStarNote">context & reflection</label>
-                    <textarea className="north-star-textarea" id="northStarNote" name="northStarNote" placeholder="Brief note about this week's change, what influenced it, and what it means for your progress..."></textarea>
+              {/* Question Navigation */}
+              <div className="question-navigation">
+                <div className="question-progress">
+                  <span className="current-question">1</span> of <span className="total-questions">5</span>
+                </div>
+                <div className="nav-buttons">
+                  <button type="button" className="btn btn-secondary" id="prevQuestion" disabled>Previous</button>
+                  <button type="button" className="btn btn-secondary" id="nextQuestion">Next</button>
+                </div>
+              </div>
+
+              {/* Question 1: North Star Section */}
+              <div className="question-container active" id="question-1">
+                <div className="north-star-section">
+                  <h3 className="north-star-title">your <em>north star</em> metric</h3>
+                  <div className="north-star-hint" id="northStarHint">track the single most important number that represents your core focus and progress during the residency</div>
+                  <div className="north-star-inputs">
+                    <div className="north-star-value">
+                      <label htmlFor="northStarValue" id="northStarValueLabel">current value</label>
+                      <input type="number" step="any" className="north-star-input" id="northStarValue" name="northStarValue" placeholder="0.0" />
+                    </div>
+                    <div className="north-star-note">
+                      <label htmlFor="northStarNote">context & reflection</label>
+                      <textarea className="north-star-textarea" id="northStarNote" name="northStarNote" placeholder="Brief note about this week's change, what influenced it, and what it means for your progress..."></textarea>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="question-section">
-                <label className="question-label">what did you <span className="emphasis">accomplish</span> this week?</label>
-                <div className="question-hint">list your key achievements, completed tasks, and milestones reached</div>
-                <textarea className="answer-input" name="accomplishments" placeholder="Example: Completed MVP features, onboarded 3 new customers, fixed critical bug in payment system..."></textarea>
+              {/* Question 2: Accomplishments */}
+              <div className="question-container" id="question-2">
+                <div className="question-section">
+                  <label className="question-label">what did you <span className="emphasis">accomplish</span> this week?</label>
+                  <div className="question-hint">list your key achievements, completed tasks, and milestones reached</div>
+                  <textarea className="answer-input" name="accomplishments" placeholder="Example: Completed MVP features, onboarded 3 new customers, fixed critical bug in payment system..."></textarea>
+                </div>
               </div>
 
-              <div className="question-section">
-                <label className="question-label">what are your <span className="emphasis">priorities</span> for next week?</label>
-                <div className="question-hint">outline your top 3-5 goals and tasks for the upcoming week</div>
-                <textarea className="answer-input" name="priorities" placeholder="Example: Launch beta version, conduct user interviews, optimize database queries..."></textarea>
+              {/* Question 3: Challenges & Next Steps */}
+              <div className="question-container" id="question-3">
+                <div className="question-section">
+                  <label className="question-label">what's <span className="emphasis">blocking</span> you right now, and what will you <span className="emphasis">focus on</span> next week to move forward?</label>
+                  <div className="question-hint">share your current obstacles and how you plan to address them – your priorities should connect to overcoming these challenges</div>
+                  <textarea className="answer-input" name="challenges-priorities" placeholder="Current blockers: API integration failing due to auth issues, waiting on design feedback for UI...&#10;&#10;Next week I'll focus on: Implementing OAuth workaround, proceeding with placeholder designs, scheduling design review for Wednesday..."></textarea>
+                </div>
               </div>
 
-              <div className="question-section">
-                <label className="question-label">what <span className="emphasis">challenges</span> are you facing?</label>
-                <div className="question-hint">describe any blockers, difficulties, or areas where you need help</div>
-                <textarea className="answer-input" name="challenges" placeholder="Example: Integration issues with third-party API, need design feedback, struggling with time management..."></textarea>
+              {/* Question 4: Dynamic followup for richer details (generated on the fly) */}
+              <div className="question-container" id="question-4">
+                <div className="dynamic-question-loading">
+                  <div className="spinner"></div>
+                  <p>Analyzing your responses to generate a personalized followup question...</p>
+                </div>
+                <div className="question-section dynamic-question" style={{display: 'none'}}>
+                  <label className="question-label" id="dynamic-question-4-label"></label>
+                  <div className="question-hint" id="dynamic-question-4-hint"></div>
+                  <textarea className="answer-input" name="dynamic-followup-detail" id="dynamic-question-4-input" placeholder=""></textarea>
+                </div>
               </div>
 
-              <div className="question-section">
-                <label className="question-label">key <span className="emphasis">metrics</span> and data points</label>
-                <div className="question-hint">share important numbers: users, revenue, engagement, experiments, etc.</div>
-                <textarea className="answer-input" name="metrics" placeholder="Example: 150 active users (+25%), $5K MRR, 68% retention rate, A/B test showed 15% improvement..."></textarea>
-              </div>
-
-              <div className="question-section">
-                <label className="question-label"><span className="emphasis">learnings</span> and insights</label>
-                <div className="question-hint">what did you learn? any surprising discoveries or pivotal realizations?</div>
-                <textarea className="answer-input" name="learnings" placeholder="Example: Users prefer mobile experience, pricing model needs adjustment, automation saved 10 hours/week..."></textarea>
-              </div>
-
-              <div className="question-section">
-                <label className="question-label"><span className="emphasis">wins</span> and celebrations</label>
-                <div className="question-hint">highlight positive moments, team achievements, or personal victories</div>
-                <textarea className="answer-input" name="wins" placeholder="Example: First paying customer, team member's great contribution, positive user feedback..."></textarea>
-              </div>
-
-              <div className="question-section">
-                <label className="question-label"><span className="emphasis">support</span> needed</label>
-                <div className="question-hint">what resources, introductions, or assistance would help you move faster?</div>
-                <textarea className="answer-input" name="support" placeholder="Example: Introduction to potential advisor, feedback on pitch deck, technical expertise in ML..."></textarea>
+              {/* Question 5: Dynamic followup from previous summaries (generated on the fly) */}
+              <div className="question-container" id="question-5">
+                <div className="dynamic-question-loading">
+                  <div className="spinner"></div>
+                  <p>Analyzing your previous updates to identify important threads to follow up on...</p>
+                </div>
+                <div className="question-section dynamic-question" style={{display: 'none'}}>
+                  <label className="question-label" id="dynamic-question-5-label"></label>
+                  <div className="question-hint" id="dynamic-question-5-hint"></div>
+                  <textarea className="answer-input" name="dynamic-followup-previous" id="dynamic-question-5-input" placeholder=""></textarea>
+                </div>
               </div>
 
               <div className="button-group">
@@ -190,7 +205,7 @@ export default function WeeklyUpdatePage() {
       <Script src="/js/pages/editor-utils.js" strategy="afterInteractive" />
       <Script src="/js/pages/update-generator.js?v=2.1" strategy="afterInteractive" />
       <Script src="/js/core/ui-utils.js" strategy="afterInteractive" />
-      <Script src="/js/forms/weekly-update-system.js?v=2.1" strategy="afterInteractive" />
+      <Script src="/js/forms/weekly-update-system.js?v=2.5" strategy="afterInteractive" />
       
       {/* Initialize components that may not have initialized due to DOMContentLoaded */}
       <Script id="init-components" strategy="afterInteractive">

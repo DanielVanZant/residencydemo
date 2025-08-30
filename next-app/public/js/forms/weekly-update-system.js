@@ -114,17 +114,9 @@ class NorthStarManager {
         if (metric && description) {
             this.hintElement.textContent = `${metric}: ${description}`;
             
-            // If we have a most recent value, show it and update label
-            if (mostRecentValue !== null && mostRecentValue !== undefined) {
-                this.inputElement.value = mostRecentValue;
-                this.labelElement.textContent = `current ${metric.toLowerCase()} (last: ${mostRecentValue} on ${this.formatDateShort(mostRecentDate)})`;
-                
-                // Don't save the pre-filled value to localStorage
-                localStorage.removeItem(`weekly-${this.inputElement.name}`);
-            } else {
-                this.labelElement.textContent = `current ${metric.toLowerCase()}`;
-                this.inputElement.value = '';
-            }
+            // Always just show the simple label without historical reference
+            this.labelElement.textContent = `current ${metric.toLowerCase()}`;
+            this.inputElement.value = '';
             
             // Update placeholder to be more specific
             this.inputElement.placeholder = this.getPlaceholderForMetric(metric);
@@ -182,6 +174,12 @@ class WeeklyUpdateApp {
         this.formManager = new FormManager('updateForm');
         this.northStarManager = new NorthStarManager();
         this.editor = null;
+        this.currentQuestion = 1;
+        this.totalQuestions = 5;
+        this.dynamicQuestionsGenerated = {
+            question4: false,
+            question5: false
+        };
         
         this.init();
     }
@@ -202,7 +200,251 @@ class WeeklyUpdateApp {
         }
 
         this.setupEventListeners();
+        this.setupQuestionNavigation();
         this.initializeEditor();
+    }
+
+    // Setup question navigation functionality
+    setupQuestionNavigation() {
+        const prevButton = document.getElementById('prevQuestion');
+        const nextButton = document.getElementById('nextQuestion');
+
+        if (prevButton) {
+            prevButton.addEventListener('click', () => this.navigateQuestion(-1));
+        }
+        
+        if (nextButton) {
+            nextButton.addEventListener('click', () => this.navigateQuestion(1));
+        }
+
+        // Initialize first question
+        this.showQuestion(1);
+    }
+
+    // Navigate between questions
+    navigateQuestion(direction) {
+        const newQuestion = this.currentQuestion + direction;
+        
+        if (newQuestion >= 1 && newQuestion <= this.totalQuestions) {
+            // Show loading state for dynamic questions
+            if ((newQuestion === 4 && !this.dynamicQuestionsGenerated.question4) ||
+                (newQuestion === 5 && !this.dynamicQuestionsGenerated.question5)) {
+                this.showNavigationLoading(true);
+            }
+            
+            this.showQuestion(newQuestion);
+        }
+    }
+    
+    // Show loading state in navigation
+    showNavigationLoading(show) {
+        const nextButton = document.getElementById('nextQuestion');
+        const prevButton = document.getElementById('prevQuestion');
+        
+        if (show) {
+            if (nextButton) {
+                nextButton.disabled = true;
+                nextButton.innerHTML = '<span class="spinner-inline"></span> Generating question...';
+            }
+            if (prevButton) {
+                prevButton.disabled = true;
+            }
+        } else {
+            if (nextButton) {
+                nextButton.innerHTML = 'Next';
+            }
+            this.updateNavigationState();
+        }
+    }
+
+    // Show specific question and update navigation
+    async showQuestion(questionNumber) {
+        // Hide all question containers
+        document.querySelectorAll('.question-container').forEach(container => {
+            container.classList.remove('active');
+        });
+
+        // Generate dynamic questions if needed
+        if (questionNumber === 4 && !this.dynamicQuestionsGenerated.question4) {
+            await this.generateDynamicQuestion4();
+        } else if (questionNumber === 5 && !this.dynamicQuestionsGenerated.question5) {
+            await this.generateDynamicQuestion5();
+        }
+
+        // Show target question
+        const targetQuestion = document.getElementById(`question-${questionNumber}`);
+        if (targetQuestion) {
+            targetQuestion.classList.add('active');
+            this.currentQuestion = questionNumber;
+            this.updateNavigationState();
+        }
+    }
+
+    // Update navigation button states and progress display
+    updateNavigationState() {
+        const prevButton = document.getElementById('prevQuestion');
+        const nextButton = document.getElementById('nextQuestion');
+        const currentQuestionSpan = document.querySelector('.current-question');
+
+        // Update progress display
+        if (currentQuestionSpan) {
+            currentQuestionSpan.textContent = this.currentQuestion;
+        }
+
+        // Update button states
+        if (prevButton) {
+            prevButton.disabled = this.currentQuestion === 1;
+        }
+        
+        if (nextButton) {
+            nextButton.disabled = this.currentQuestion === this.totalQuestions;
+        }
+    }
+
+    // Generate Question 4: Followup on initial responses for richer detail
+    async generateDynamicQuestion4() {
+        try {
+            console.log('Generating dynamic question 4...');
+            
+            // Get responses from questions 1-3
+            const formData = this.formManager.getFormData();
+            const northStar = {
+                value: formData.northStarValue || '',
+                note: formData.northStarNote || ''
+            };
+
+            const requestData = {
+                accomplishments: formData.accomplishments || '',
+                challengesPriorities: formData['challenges-priorities'] || '',
+                northStar: northStar
+            };
+            
+            console.log('Sending request data:', requestData);
+
+            const response = await fetch('/api/generate-dynamic-question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: 'detail-followup',
+                    data: requestData
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to generate question: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            // Update the question elements
+            document.getElementById('dynamic-question-4-label').innerHTML = result.question;
+            document.getElementById('dynamic-question-4-hint').textContent = result.hint;
+            document.getElementById('dynamic-question-4-input').placeholder = result.placeholder;
+
+            // Show the question and hide loading
+            const container = document.getElementById('question-4');
+            container.querySelector('.dynamic-question-loading').style.display = 'none';
+            container.querySelector('.dynamic-question').style.display = 'block';
+
+            this.dynamicQuestionsGenerated.question4 = true;
+            console.log('Dynamic question 4 generated successfully');
+            
+            // Hide loading state
+            this.showNavigationLoading(false);
+
+        } catch (error) {
+            console.error('Error generating dynamic question 4:', error);
+            
+            // Fallback question
+            document.getElementById('dynamic-question-4-label').innerHTML = 'Can you elaborate on one of your accomplishments or challenges that would benefit from more <span class="emphasis">context</span> or <span class="emphasis">detail</span>?';
+            document.getElementById('dynamic-question-4-hint').textContent = 'Choose something from your previous responses that you feel deserves more explanation or background';
+            document.getElementById('dynamic-question-4-input').placeholder = 'Example: The technical details behind that breakthrough, the specific obstacles in that challenge, the impact of that accomplishment...';
+
+            // Show fallback question
+            const container = document.getElementById('question-4');
+            container.querySelector('.dynamic-question-loading').style.display = 'none';
+            container.querySelector('.dynamic-question').style.display = 'block';
+            
+            this.dynamicQuestionsGenerated.question4 = true;
+            
+            // Hide loading state
+            this.showNavigationLoading(false);
+        }
+    }
+
+    // Generate Question 5: Followup from previous week's summaries  
+    async generateDynamicQuestion5() {
+        try {
+            console.log('Generating dynamic question 5...');
+            
+            const username = window.userSession?.getUser();
+            if (!username) {
+                throw new Error('No username available');
+            }
+
+            const response = await fetch('/api/generate-dynamic-question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: 'previous-followup',
+                    data: { username }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to generate question: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('Question 5 API response:', result);
+            
+            // Update the question elements
+            const labelEl = document.getElementById('dynamic-question-5-label');
+            const hintEl = document.getElementById('dynamic-question-5-hint');
+            const inputEl = document.getElementById('dynamic-question-5-input');
+            
+            if (!labelEl || !hintEl || !inputEl) {
+                console.error('Question 5 elements not found:', { labelEl, hintEl, inputEl });
+                throw new Error('Question 5 DOM elements missing');
+            }
+            
+            labelEl.innerHTML = result.question;
+            hintEl.textContent = result.hint;
+            inputEl.placeholder = result.placeholder;
+
+            // Show the question and hide loading
+            const container = document.getElementById('question-5');
+            container.querySelector('.dynamic-question-loading').style.display = 'none';
+            container.querySelector('.dynamic-question').style.display = 'block';
+
+            this.dynamicQuestionsGenerated.question5 = true;
+            console.log('Dynamic question 5 generated successfully');
+            
+            // Hide loading state
+            this.showNavigationLoading(false);
+
+        } catch (error) {
+            console.error('Error generating dynamic question 5:', error);
+            
+            // Fallback question
+            document.getElementById('dynamic-question-5-label').innerHTML = 'Looking back at your recent work, what <span class="emphasis">progress</span> or <span class="emphasis">development</span> would you like to share an update on?';
+            document.getElementById('dynamic-question-5-hint').textContent = 'Think about ongoing projects, goals, or challenges from previous weeks that have evolved';
+            document.getElementById('dynamic-question-5-input').placeholder = 'Example: How that feature launch went, progress on that difficult problem, results from that experiment you mentioned...';
+
+            // Show fallback question
+            const container = document.getElementById('question-5');
+            container.querySelector('.dynamic-question-loading').style.display = 'none';
+            container.querySelector('.dynamic-question').style.display = 'block';
+            
+            this.dynamicQuestionsGenerated.question5 = true;
+            
+            // Hide loading state
+            this.showNavigationLoading(false);
+        }
     }
 
     setupEventListeners() {

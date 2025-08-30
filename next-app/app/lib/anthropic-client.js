@@ -4,7 +4,7 @@ class AnthropicClient {
     constructor(apiKey = process.env.ANTHROPIC_API_KEY) {
         this.apiKey = apiKey;
         this.baseUrl = 'https://api.anthropic.com/v1/messages';
-        this.defaultModel = 'claude-sonnet-4-20250514';
+        this.model = 'claude-sonnet-4-20250514';
         this.maxRetries = 3;
         this.baseDelay = 3000;
     }
@@ -99,30 +99,21 @@ Group related information logically and indicate which items are suitable for pu
 Accomplishments:
 ${formData.accomplishments || ''}
 
-Priorities for next week:
-${formData.priorities || ''}
+Challenges and Priorities:
+${formData['challenges-priorities'] || ''}
 
-Challenges:
-${formData.challenges || ''}
+Additional Details:
+${formData['dynamic-followup-detail'] || ''}
 
-Metrics:
-${formData.metrics || ''}
-
-Learnings:
-${formData.learnings || ''}
-
-Wins:
-${formData.wins || ''}
-
-Support needed:
-${formData.support || ''}
+Previous Thread Followup:
+${formData['dynamic-followup-previous'] || ''}
 
 Organize this information hierarchically based on logical relationships and themes. 
 Use your best judgment to pre-check items that seem appropriate for public sharing while protecting sensitive personal details.
 Return as markdown checklist format.`;
 
         const requestBody = {
-            model: this.defaultModel,
+            model: this.model,
             max_tokens: 2000,
             temperature: 0,
             system: systemPrompt,
@@ -247,7 +238,7 @@ Use markdown formatting. Stick strictly to facts from the updates provided.`;
         }
 
         const requestBody = {
-            model: this.defaultModel,
+            model: this.model,
             max_tokens: 4000,
             temperature: 0.4,
             messages: [
@@ -331,7 +322,7 @@ Return ONLY a raw JSON object in Editor.js format with structured blocks (do NOT
 Use these block types: header (levels 2-3), paragraph, and list (unordered).`;
 
         const requestBody = {
-            model: this.defaultModel,
+            model: this.model,
             max_tokens: 2000,
             temperature: 0.3,
             system: enhancedSystemPrompt,
@@ -342,6 +333,164 @@ Use these block types: header (levels 2-3), paragraph, and list (unordered).`;
                 }
             ]
         };
+
+        return await this.callWithRetry(requestBody);
+    }
+
+    // Generate dynamic followup question based on current responses (Question 4)
+    async generateDetailFollowupQuestion(formData) {
+        console.log('Generating detail followup question for:', formData);
+        
+        const systemPrompt = `You are an expert at identifying the most important missing details that would make a weekly update more valuable and impactful.
+
+Your goal is to find the ONE most significant accomplishment, breakthrough, or challenge from the user's responses that needs more specific details to be properly understood and appreciated by readers.
+
+Focus on:
+- Technical breakthroughs that need more explanation of HOW they work
+- Major accomplishments missing key metrics, impact, or process details  
+- Challenges missing specific obstacles, root causes, or attempted solutions
+- Anything that sounds impressive but lacks the details that would make it compelling
+
+Create a direct, specific question that extracts exactly what's missing. Avoid conversational fluff.
+
+Return your response as JSON with this exact structure:
+
+{
+  "question": "Direct question with <span class='emphasis'>emphasized</span> key words focusing on specifics",
+  "hint": "What specific details to include", 
+  "placeholder": "Example with concrete details..."
+}`;
+
+        const accomplishments = formData.accomplishments || '';
+        const challengesPriorities = formData.challengesPriorities || '';
+        const northStar = formData.northStar || {};
+
+        const userPrompt = `Analyze these weekly update responses and identify the ONE item that needs more specific details to be properly understood:
+
+ACCOMPLISHMENTS:
+${accomplishments}
+
+CHALLENGES AND PRIORITIES:
+${challengesPriorities}
+
+NORTH STAR (${northStar.value || 'Not specified'}):
+${northStar.note || 'No context provided'}
+
+Find the most significant item that sounds impressive or important but lacks crucial details like:
+- Specific numbers, metrics, or measurements
+- Technical explanation of how something works
+- Root causes of problems or obstacles
+- Process steps or methodology
+- Timeline or sequence of events
+- Impact or outcomes
+
+Create a direct question asking for the missing specifics that would make this item compelling in a weekly update.
+
+Return as JSON only.`;
+
+        const requestBody = {
+            model: this.model,
+            max_tokens: 1000,
+            temperature: 0.7,
+            system: systemPrompt,
+            messages: [
+                {
+                    role: 'user',
+                    content: userPrompt
+                }
+            ]
+        };
+
+        return await this.callWithRetry(requestBody);
+    }
+
+    // Generate followup question based on previous week's summaries (Question 5)
+    async generatePreviousFollowupQuestion(data) {
+        console.log('Generating previous followup question for:', data.username);
+        
+        const systemPrompt = `You are an expert at identifying the most important ongoing threads from previous weekly updates that need status updates.
+
+Your goal is to find the ONE most significant ongoing situation from their previous summaries that would have natural progress or developments worth sharing in a weekly update.
+
+Focus on:
+- Major ongoing projects or technical work that would have concrete progress
+- Personal or professional situations that would naturally evolve over time
+- Conflicts, challenges, or decisions that would have resolutions or developments
+- Health, financial, or relationship situations that would have updates
+
+Create a direct, specific question that asks for the current status. Avoid conversational fluff.
+
+Return your response as JSON with this exact structure:
+
+{
+  "question": "Direct question with <span class='emphasis'>emphasized</span> key words asking for current status",
+  "hint": "What specific updates or developments to share",
+  "placeholder": "Example with concrete status updates..."
+}`;
+
+        // Get the user's previous summaries
+        let userPrompt;
+        
+        try {
+            // Fetch previous summaries for this user
+            const summariesResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/api/user-summaries/${data.username}`);
+            
+            if (summariesResponse.ok) {
+                const summariesData = await summariesResponse.json();
+                console.log('Previous summaries data for Question 5:', summariesData);
+                
+                userPrompt = `Analyze these previous weekly update summaries and identify the ONE most important ongoing situation that needs a status update:
+
+PREVIOUS PUBLIC SUMMARY:
+${summariesData.public_summary || 'No previous public summary available'}
+
+PREVIOUS PRIVATE NOTES:
+${summariesData.personal_summary || 'No previous private notes available'}
+
+Find the most significant ongoing thread that would naturally have developments or progress since these summaries were written. Focus on situations that would have concrete updates, resolutions, or status changes.
+
+Create a direct question asking for the current status of this specific situation. Reference the actual context from the summaries.
+
+Return as JSON only.`;
+            } else {
+                // No previous data available
+                userPrompt = `Create a thoughtful followup question for ${data.username} about ongoing work or recent developments, since no previous weekly update data is available.
+
+The question should encourage them to share updates on important ongoing projects, goals, experiments, or initiatives that may not have been covered in their previous responses.
+
+Return as JSON only.`;
+            }
+        } catch (error) {
+            console.warn('Could not fetch previous summaries:', error);
+            // Fallback prompt
+            userPrompt = `Create a thoughtful followup question for ${data.username} about ongoing work or recent developments.
+
+The question should encourage them to share updates on important ongoing projects, goals, experiments, or initiatives that may not have been covered in their previous responses.
+
+Return as JSON only.`;
+        }
+
+        const requestBody = {
+            model: this.model,
+            max_tokens: 1000,
+            temperature: 0.7,
+            system: systemPrompt,
+            messages: [
+                {
+                    role: 'user',
+                    content: userPrompt
+                }
+            ]
+        };
+
+        console.log('=== QUESTION 5 ANTHROPIC API REQUEST ===');
+        console.log('System Prompt:');
+        console.log(systemPrompt);
+        console.log('\nUser Prompt:');
+        console.log(userPrompt);
+        console.log('\nComplete Request Body:');
+        console.log(JSON.stringify(requestBody, null, 2));
+        console.log('=== END QUESTION 5 REQUEST ===');
 
         return await this.callWithRetry(requestBody);
     }

@@ -83,13 +83,17 @@ export const getUserNorthStar = query({
       };
     }
     
-    // Get most recent north star value
-    const recentUpdate = await ctx.db
+    // Get most recent north star value (simplified - not displayed in UI anymore)
+    const allUpdates = await ctx.db
       .query("weekly_updates")
       .withIndex("by_user_id", (q) => q.eq("user_id", user._id))
-      .filter((q) => q.neq(q.field("north_star_value"), undefined))
-      .order("desc")
-      .first();
+      .collect();
+    
+    // Sort by week_date in descending order (most recent first)
+    allUpdates.sort((a, b) => new Date(b.week_date).getTime() - new Date(a.week_date).getTime());
+    
+    // Find the first update with a north star value
+    const recentUpdate = allUpdates.find(update => update.north_star_value && update.north_star_value.trim() !== "");
     
     return {
       northStarMetric: user.north_star_metric,

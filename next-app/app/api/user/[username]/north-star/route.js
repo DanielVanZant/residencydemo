@@ -9,13 +9,17 @@ export async function GET(request, { params }) {
         console.log(`API: Getting north star for user: ${username}`);
         
         const northStar = await convex.query(api.users.getUserNorthStar, { username });
+        console.log('Convex getUserNorthStar response:', northStar);
         
         return Response.json({
-            northStarMetric: northStar?.north_star_metric || '',
-            northStarDescription: northStar?.north_star_description || ''
+            northStarMetric: northStar?.northStarMetric || '',
+            northStarDescription: northStar?.northStarDescription || '',
+            mostRecentValue: northStar?.mostRecentValue,
+            mostRecentDate: northStar?.mostRecentDate
         });
     } catch (error) {
-        console.error(`Error fetching north star for ${params.username}:`, error);
+        const { username } = await params;
+        console.error(`Error fetching north star for ${username}:`, error);
         return Response.json({ 
             error: 'Failed to fetch north star data',
             details: error.message 
@@ -25,19 +29,20 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
     try {
-        const { username } = params;
+        const { username } = await params;
         const { northStarMetric, northStarDescription } = await request.json();
         console.log(`API: Updating north star for user: ${username}`);
         
         await convex.mutation(api.users.updateUserNorthStar, {
             username,
-            northStarMetric,
-            northStarDescription
+            metric: northStarMetric,
+            description: northStarDescription
         });
         
         return Response.json({ success: true });
     } catch (error) {
-        console.error(`Error updating north star for ${params.username}:`, error);
+        const { username } = await params;
+        console.error(`Error updating north star for ${username}:`, error);
         return Response.json({ 
             error: 'Failed to update north star data',
             details: error.message 
