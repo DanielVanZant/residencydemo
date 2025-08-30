@@ -53,5 +53,4 @@ async function initiateVoiceCall(phoneNumber) {
   return { callSid: call.sid };
 }
 
-// Export for use in other files
-export { getUserByPhone };
+// Note: getUserByPhone function available within this module only
