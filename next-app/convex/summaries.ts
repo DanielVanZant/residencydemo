@@ -108,7 +108,7 @@ export const getAllUserSummaries = query({
           north_star_metric: user.north_star_metric,
           north_star_description: user.north_star_description,
           public_summary: summaries.public_summary,
-          personal_summary: summaries.personal_summary,
+          // NEVER include personal_summary in getAllUserSummaries - privacy protection
           last_updated: summaries.last_updated,
         });
       }

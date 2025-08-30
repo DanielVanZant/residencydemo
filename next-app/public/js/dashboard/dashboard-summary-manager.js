@@ -7,10 +7,15 @@ class DashboardSummaryManager {
     }
 
     // Load user summaries from API
-    async loadUserSummaries(username) {
+    async loadUserSummaries(username, publicOnly = false) {
         try {
-            console.log(`Loading summaries for user: ${username}`);
-            const response = await fetch(`/api/user-summaries/${username}`);
+            console.log(`Loading summaries for user: ${username} (public only: ${publicOnly})`);
+            
+            const endpoint = publicOnly ? 
+                `/api/viewer-summaries/${username}` : 
+                `/api/user-summaries/${username}`;
+            
+            const response = await fetch(endpoint);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -20,7 +25,7 @@ class DashboardSummaryManager {
             this.summaries = data;
             
             console.log('User summaries loaded:', data);
-            this.displaySummaries();
+            this.displaySummaries(publicOnly);
             
         } catch (error) {
             console.error('Error loading user summaries:', error);
@@ -29,7 +34,7 @@ class DashboardSummaryManager {
     }
 
     // Display loaded summaries
-    displaySummaries() {
+    displaySummaries(publicOnly = false) {
         if (!this.summaries || (!this.summaries.public_summary && !this.summaries.personal_summary)) {
             this.displaySummaryError();
             return;
@@ -48,8 +53,8 @@ class DashboardSummaryManager {
             this.container.appendChild(publicCard);
         }
 
-        // Personal Summary
-        if (this.summaries.personal_summary) {
+        // Personal Summary - only show if not in public-only mode
+        if (this.summaries.personal_summary && !publicOnly) {
             const personalCard = this.createSummaryCard('Personal Summary', this.summaries.personal_summary, 'personal');
             this.container.appendChild(personalCard);
         }

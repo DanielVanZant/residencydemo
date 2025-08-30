@@ -71,6 +71,7 @@ export default function HomePage() {
             <div className="nav-links">
               <a href="/weekly-update" className="nav-link">New Update</a>
               <a href="/dashboard" className="nav-link">Dashboard</a>
+              <a href="/users" className="nav-link">Team Directory</a>
             </div>
           </div>
         </div>
@@ -123,7 +124,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="user-actions">
-                      <a href={`/dashboard?user=${encodeURIComponent(user.username)}`} className="btn btn-primary">View Dashboard</a>
+                      <a href={`/viewer/${encodeURIComponent(user.username)}?user=me`} className="btn btn-primary">View Dashboard</a>
                       <a href="/weekly-update" className="btn btn-secondary">New Update</a>
                     </div>
                   </div>

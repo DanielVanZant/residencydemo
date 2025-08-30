@@ -204,6 +204,59 @@ class UIUtils {
             tabsContainer.style.display = 'none';
         }
     }
+
+    // Users page UI state management
+    showUsersLoading(show) {
+        const loadingEl = document.getElementById('usersLoading');
+        if (loadingEl) {
+            loadingEl.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    showUsersError(message) {
+        const errorEl = document.getElementById('usersError');
+        if (errorEl) {
+            if (message) {
+                const messageEl = errorEl.querySelector('p');
+                if (messageEl) {
+                    messageEl.textContent = message;
+                }
+            }
+            errorEl.style.display = 'block';
+        }
+    }
+
+    hideUsersError() {
+        const errorEl = document.getElementById('usersError');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+    }
+
+    showUsersEmpty(show) {
+        const emptyEl = document.getElementById('usersEmpty');
+        if (emptyEl) {
+            emptyEl.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    hideUsersEmpty() {
+        this.showUsersEmpty(false);
+    }
+
+    showUsersGrid() {
+        const gridEl = document.getElementById('usersGrid');
+        if (gridEl) {
+            gridEl.style.display = 'block';
+        }
+    }
+
+    hideUsersGrid() {
+        const gridEl = document.getElementById('usersGrid');
+        if (gridEl) {
+            gridEl.style.display = 'none';
+        }
+    }
 }
 
 // Export for global use

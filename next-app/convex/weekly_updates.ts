@@ -289,3 +289,62 @@ export const deleteWeeklyUpdate = mutation({
     return { deleted: true, message: `Deleted update for ${args.username} on ${args.weekDate}` };
   },
 });
+
+// Get all users with their latest update (for public directory)
+export const getAllUsersWithLatestUpdates = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const result = [];
+    
+    for (const user of users) {
+      // Get total update count for this user
+      const allUpdates = await ctx.db
+        .query("weekly_updates")
+        .withIndex("by_user_id", (q) => q.eq("user_id", user._id))
+        .collect();
+      
+      // Get the most recent update
+      const latestUpdate = allUpdates
+        .sort((a, b) => new Date(b.week_date).getTime() - new Date(a.week_date).getTime())[0];
+      
+      let latestUpdateFormatted = null;
+      if (latestUpdate) {
+        const formattedUpdates = await ctx.db
+          .query("formatted_updates")
+          .withIndex("by_weekly_update", (q) => q.eq("weekly_update_id", latestUpdate._id))
+          .collect();
+        
+        const formattedObj: Record<string, any> = {};
+        for (const formatted of formattedUpdates) {
+          try {
+            formattedObj[formatted.privacy_level] = JSON.parse(formatted.content_json);
+          } catch (e) {
+            console.error("Error parsing formatted update:", e);
+          }
+        }
+        
+        latestUpdateFormatted = {
+          id: latestUpdate._id,
+          weekDate: latestUpdate.week_date,
+          formattedUpdates: formattedObj,
+          northStarValue: latestUpdate.north_star_value,
+          northStarMetric: user.north_star_metric,
+          createdAt: latestUpdate.created_at,
+          updatedAt: latestUpdate.updated_at,
+        };
+      }
+      
+      result.push({
+        username: user.username,
+        totalUpdates: allUpdates.length,
+        latestUpdate: latestUpdateFormatted,
+      });
+    }
+    
+    // Sort by total updates descending (most active users first)
+    result.sort((a, b) => b.totalUpdates - a.totalUpdates);
+    
+    return result;
+  },
+});

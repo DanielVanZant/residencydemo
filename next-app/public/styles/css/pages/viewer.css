@@ -1,0 +1,60 @@
+/* Viewer-specific styles - based on dashboard but optimized for public viewing */
+
+/* Import dashboard styles as base */
+@import 'dashboard.css';
+
+/* Override update content to be full width in viewer */
+.viewer-mode .update-content {
+    display: block !important;
+    grid-template-columns: none !important;
+}
+
+.viewer-mode .dashboard-update .update-content {
+    display: block !important;
+    grid-template-columns: none !important;
+}
+
+.viewer-mode .formatted-update {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+/* Ensure single column layout for all screen sizes in viewer */
+@media (min-width: 1600px) {
+    .viewer-mode .update-content {
+        display: block !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .viewer-mode .update-content {
+        display: block !important;
+        grid-template-columns: none !important;
+    }
+}
+
+/* Default to summary tab being active in viewer */
+.viewer-mode .tab-button[data-tab="summary"] {
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--accent-secondary);
+    font-weight: var(--font-semibold);
+}
+
+.viewer-mode .tab-button[data-tab="updates"] {
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+    border: none;
+    font-weight: var(--font-medium);
+}
+
+.viewer-mode #summaryTab {
+    display: block;
+}
+
+.viewer-mode #updatesTab {
+    display: none;
+}

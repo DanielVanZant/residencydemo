@@ -1,63 +1,54 @@
-// Refactored Dashboard functionality using modular components
-class Dashboard {
+// Viewer functionality - same as dashboard but filters private content
+class Viewer {
     constructor() {
-        this.currentUser = null;
+        this.targetUser = null;
+        this.viewerUser = null;
         this.updates = [];
         
-        // Initialize modular components
+        // Initialize modular components (reuse existing ones)
         this.chartManager = new ChartManager();
         this.contentRenderer = new ContentRenderer();
         this.summaryManager = new DashboardSummaryManager(this.contentRenderer);
         this.recommendationsManager = new RecommendationsManager();
-        this.ui = window.uiUtils; // Use global ui utils instance
+        this.ui = window.uiUtils;
         
         this.init();
     }
 
     async init() {
-        // Use existing user session functionality instead of duplicating
-        const savedUser = await window.userSession.populateUserDropdown('dashboardUser', async (selectedUser) => {
-            await this.handleUserChange(selectedUser);
-        });
-
+        // Get target username from URL path
+        const pathParts = window.location.pathname.split('/');
+        this.targetUser = decodeURIComponent(pathParts[pathParts.length - 1]);
+        
+        // Get viewer username from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        this.viewerUser = urlParams.get('user');
+        
+        console.log(`Viewer: ${this.viewerUser} viewing ${this.targetUser}`);
+        
+        // Update UI with usernames
+        this.updateUserDisplay();
+        
         this.setupEventListeners();
         
-        // Load data for saved user or URL param user
-        if (savedUser) {
-            await this.loadUserUpdates(savedUser);
-        } else {
-            // Check for user in URL params as fallback
-            const urlParams = new URLSearchParams(window.location.search);
-            const user = urlParams.get('user');
-            if (user) {
-                const userSelect = document.getElementById('dashboardUser');
-                userSelect.value = user;
-                window.userSession.setUser(user);
-                await this.loadUserUpdates(user);
-            }
+        // Load target user's data (filtered)
+        if (this.targetUser) {
+            await this.loadUserUpdates(this.targetUser);
+            // Default to summary tab in viewer mode
+            await this.summaryManager.loadUserSummaries(this.targetUser, true);
         }
+    }
+
+    updateUserDisplay() {
+        const targetUsernameElements = document.querySelectorAll('#targetUsername, #heroTargetUsername');
+        targetUsernameElements.forEach(el => {
+            if (el) el.textContent = this.targetUser || 'Unknown User';
+        });
     }
 
     setupEventListeners() {
-        // Set up tab event listeners
+        // Set up tab event listeners (same as dashboard)
         this.setupTabEventListeners();
-    }
-
-    async handleUserChange(selectedUser) {
-        if (selectedUser) {
-            // Update URL without page reload
-            const url = new URL(window.location);
-            url.searchParams.set('user', selectedUser);
-            window.history.pushState({}, '', url);
-            
-            await this.loadUserUpdates(selectedUser);
-        } else {
-            this.clearDashboard();
-            // Clear URL param when no user selected
-            const url = new URL(window.location);
-            url.searchParams.delete('user');
-            window.history.pushState({}, '', url);
-        }
     }
 
     setupTabEventListeners() {
@@ -92,30 +83,28 @@ class Dashboard {
         }
 
         // Load summary data if switching to summary tab
-        if (tabName === 'summary' && this.currentUser) {
-            // Always reload summaries to ensure we get the right user's data
-            this.summaryManager.loadUserSummaries(this.currentUser);
+        if (tabName === 'summary' && this.targetUser) {
+            // Load summaries for target user (filtered)
+            this.summaryManager.loadUserSummaries(this.targetUser, true); // true = public mode
         }
 
         // Load recommendations if switching to recommendations tab
-        if (tabName === 'recommendations' && this.currentUser) {
-            // Load recommendations with private data included (dashboard view)
-            this.recommendationsManager.loadUserRecommendations(this.currentUser, true);
+        if (tabName === 'recommendations' && this.targetUser) {
+            // Load recommendations for target user (public data only)
+            this.recommendationsManager.loadUserRecommendations(this.targetUser, false);
         }
     }
 
     async loadUserUpdates(username) {
-        this.currentUser = username;
-        this.summaryManager.clearSummaries(); // Clear cached summaries when switching users
-        this.recommendationsManager.clearRecommendations(); // Clear cached recommendations when switching users
-        
         this.ui.showDashboardLoading(true);
         this.ui.hideDashboardError();
         this.ui.hideDashboardEmpty();
 
         try {
-            console.log(`Loading updates for user: ${username}`);
-            const response = await fetch(`/api/user-updates/${username}`);
+            console.log(`Loading updates for user: ${username} (viewer mode)`);
+            
+            // Use public viewer API endpoint
+            const response = await fetch(`/api/viewer-updates/${username}?viewer=${encodeURIComponent(this.viewerUser || 'anonymous')}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -124,7 +113,7 @@ class Dashboard {
             const data = await response.json();
             this.updates = data.updates || [];
             
-            console.log(`Loaded ${this.updates.length} updates`);
+            console.log(`Loaded ${this.updates.length} filtered updates`);
             
             if (this.updates.length === 0) {
                 this.ui.showDashboardEmpty(true);
@@ -135,16 +124,10 @@ class Dashboard {
                 this.chartManager.displayChart(this.updates);
                 this.ui.showDashboardTabs();
                 
-                // If Summary tab is active, reload summaries for the new user
+                // If Summary tab is active, reload summaries for the target user
                 const activeSummaryTab = document.querySelector('.tab-button.active[data-tab="summary"]');
                 if (activeSummaryTab) {
-                    await this.summaryManager.loadUserSummaries(username);
-                }
-                
-                // If Recommendations tab is active, reload recommendations for the new user
-                const activeRecommendationsTab = document.querySelector('.tab-button.active[data-tab="recommendations"]');
-                if (activeRecommendationsTab) {
-                    await this.recommendationsManager.loadUserRecommendations(username, true);
+                    await this.summaryManager.loadUserSummaries(username, true); // true = public mode
                 }
             }
             
@@ -172,11 +155,11 @@ class Dashboard {
 
     async createUpdateElement(update, index) {
         const updateDiv = document.createElement('div');
-        updateDiv.className = 'dashboard-update';
+        updateDiv.className = 'dashboard-update viewer-single-update';
         
         const publishedId = `update-published-${index}`;
-        const internalId = `update-internal-${index}`;
         
+        // Only show published updates, never internal notes
         updateDiv.innerHTML = `
             <div class="update-header">
                 <h3 class="update-date">Week of ${this.contentRenderer.formatDate(update.weekDate)}</h3>
@@ -187,48 +170,42 @@ class Dashboard {
                 </div>
             </div>
             
-            <div class="update-content">
+            <div class="update-content viewer-single-column">
                 ${this.contentRenderer.renderFormattedUpdate(update.formattedUpdates.published, 'Published Update', 'published', publishedId)}
-                ${this.contentRenderer.renderFormattedUpdate(update.formattedUpdates.internal, 'Internal Notes', 'internal', internalId)}
             </div>
         `;
         
         // Render the content after adding to DOM
         setTimeout(() => {
             this.contentRenderer.renderUpdateContent(update.formattedUpdates.published, publishedId);
-            this.contentRenderer.renderUpdateContent(update.formattedUpdates.internal, internalId);
+            
+            // Force single column layout for viewer
+            const updateContent = updateDiv.querySelector('.update-content');
+            if (updateContent) {
+                updateContent.style.display = 'block';
+                updateContent.style.gridTemplateColumns = 'none';
+                updateContent.style.width = '100%';
+                
+                const formattedUpdate = updateContent.querySelector('.formatted-update');
+                if (formattedUpdate) {
+                    formattedUpdate.style.width = '100%';
+                    formattedUpdate.style.maxWidth = '100%';
+                    formattedUpdate.style.margin = '0';
+                }
+            }
         }, 0);
         
         return updateDiv;
     }
-
-    clearDashboard() {
-        const updatesContainer = document.getElementById('dashboardUpdates');
-        updatesContainer.innerHTML = '';
-        updatesContainer.style.display = 'none';
-        
-        this.ui.hideDashboardError();
-        this.ui.hideDashboardEmpty();
-        this.ui.showDashboardLoading(false);
-        
-        this.chartManager.hideChart();
-        this.ui.hideDashboardTabs();
-        
-        this.summaryManager.clearSummaries();
-        this.recommendationsManager.clearRecommendations();
-        
-        // Reset to updates tab
-        this.switchTab('updates');
-    }
 }
 
-// Export Dashboard class for use in other modules
-window.Dashboard = Dashboard;
+// Export Viewer class for use in other modules
+window.Viewer = Viewer;
 
-// Initialize dashboard when page loads (if not already done)
+// Initialize viewer when page loads (if not already done)
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.dashboardApp) {
-        window.dashboardApp = new Dashboard();
-        console.log('Dashboard initialized via DOMContentLoaded');
+    if (!window.viewerApp) {
+        window.viewerApp = new Viewer();
+        console.log('Viewer initialized via DOMContentLoaded');
     }
 });

@@ -1,12 +1,12 @@
 import Script from 'next/script'
 
 export const metadata = {
-  title: 'Weekly Updates Dashboard',
+  title: 'User Dashboard Viewer',
 }
 
-export default function DashboardPage() {
+export default function ViewerPage() {
   return (
-    <>
+    <div className="viewer-mode">
       {/* Load external Editor.js and Chart.js scripts */}
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest" strategy="beforeInteractive" />
       <Script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest" strategy="beforeInteractive" />
@@ -21,14 +21,12 @@ export default function DashboardPage() {
           </div>
           <div className="nav-links">
             <a href="/weekly-update" className="nav-link">New Update</a>
+            <a href="/dashboard" className="nav-link">My Dashboard</a>
             <a href="/users" className="nav-link">Team Directory</a>
           </div>
           <div className="nav-account">
-            <div className="account-selector">
-              <label htmlFor="dashboardUser">Account:</label>
-              <select className="account-select" id="dashboardUser">
-                <option value="">Select account...</option>
-              </select>
+            <div className="viewer-info">
+              <span id="viewerUsername" className="viewer-label">Viewing: <span id="targetUsername"></span></span>
             </div>
           </div>
         </div>
@@ -39,16 +37,13 @@ export default function DashboardPage() {
         <div className="container">
           <div className="header">
             <h1>weekly updates <em>dashboard</em></h1>
-            <p>view your <em>progress</em> and <em>achievements</em> over time</p>
-          </div>
-          <div className="dashboard-actions">
-            <a href="/weekly-update" className="btn btn-primary">New Weekly Update</a>
+            <p>viewing <em id="heroTargetUsername"></em>'s progress and achievements</p>
           </div>
         </div>
       </section>
 
       {/* Dashboard Content */}
-      <section className="dashboard-content">
+      <section className="dashboard-content viewer-mode">
         <div className="container">
           <div id="dashboardLoading" className="simple-loading">
             <div className="spinner"></div>
@@ -62,7 +57,6 @@ export default function DashboardPage() {
           <div id="dashboardEmpty" className="empty-state">
             <h3>No Updates Found</h3>
             <p>This user hasn't created any weekly updates yet.</p>
-            <a href="/weekly-update" className="btn btn-primary">Create First Update</a>
           </div>
 
           {/* North Star Metric Chart - Always visible at top */}
@@ -75,31 +69,24 @@ export default function DashboardPage() {
 
           {/* Dashboard Tabs */}
           <div id="dashboardTabs" className="dashboard-tabs" style={{display: 'none'}}>
-            <button className="tab-button active" data-tab="updates">Weekly Updates</button>
-            <button className="tab-button" data-tab="summary">Summary</button>
-            <button className="tab-button" data-tab="recommendations">Connections</button>
+            <button className="tab-button" data-tab="updates">Weekly Updates</button>
+            <button className="tab-button active" data-tab="summary">Summary</button>
           </div>
 
           {/* Updates Tab Content */}
-          <div id="updatesTab" className="tab-content active">
+          <div id="updatesTab" className="tab-content">
             <div id="dashboardUpdates" className="dashboard-updates">
               {/* Updates will be populated here */}
             </div>
           </div>
 
           {/* Summary Tab Content */}
-          <div id="summaryTab" className="tab-content">
+          <div id="summaryTab" className="tab-content active">
             <div id="userSummaryContainer" className="user-summary-container">
               {/* User summaries will be populated here */}
             </div>
           </div>
 
-          {/* Recommendations Tab Content */}
-          <div id="recommendationsTab" className="tab-content">
-            <div id="recommendationsContainer" className="recommendations-container">
-              {/* User recommendations will be populated here */}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -110,24 +97,24 @@ export default function DashboardPage() {
       <Script src="/js/dashboard/content-renderer.js" strategy="afterInteractive" />
       <Script src="/js/dashboard/dashboard-summary-manager.js" strategy="afterInteractive" />
       <Script src="/js/dashboard/recommendations-manager.js" strategy="afterInteractive" />
-      <Script src="/js/dashboard/dashboard.js" strategy="afterInteractive" />
+      <Script src="/js/viewer/viewer.js" strategy="afterInteractive" />
       
-      {/* Initialize dashboard components that may not have initialized due to DOMContentLoaded */}
-      <Script id="init-dashboard" strategy="afterInteractive">
+      {/* Initialize viewer components */}
+      <Script id="init-viewer" strategy="afterInteractive">
         {`
           setTimeout(() => {
-            // Initialize dashboard if not already done
-            if (!window.dashboardApp && window.Dashboard) {
+            // Initialize viewer if not already done
+            if (!window.viewerApp && window.Viewer) {
               try {
-                window.dashboardApp = new window.Dashboard();
-                console.log('Dashboard initialized');
+                window.viewerApp = new window.Viewer();
+                console.log('Viewer initialized');
               } catch (e) {
-                console.error('Failed to initialize Dashboard:', e);
+                console.error('Failed to initialize Viewer:', e);
               }
             }
           }, 1000);
         `}
       </Script>
-    </>
+    </div>
   )
 }
