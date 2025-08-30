@@ -1,0 +1,7 @@
+@import './core/variables.css';
+@import './core/base.css';
+@import './core/layout.css';
+@import './core/navigation.css';
+@import './core/animations.css';
+@import './components/cards.css';
+@import './components/privacy.css';

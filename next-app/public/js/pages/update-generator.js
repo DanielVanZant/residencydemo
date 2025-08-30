@@ -289,6 +289,13 @@ class UpdateGenerator {
         console.log(`Initializing editor for ${updateType}:`, updateData);
         
         try {
+            // Check if the DOM element exists first
+            const holderElement = document.getElementById(editorId);
+            if (!holderElement) {
+                console.error(`Element with ID '${editorId}' not found in DOM. Skipping editor initialization.`);
+                return;
+            }
+            
             // Check if Editor.js and tools are available
             if (typeof EditorJS === 'undefined') {
                 throw new Error('EditorJS not loaded');
@@ -326,9 +333,50 @@ class UpdateGenerator {
             let editorData = { blocks: [] };
             
             // Handle different update data formats
-            if (typeof updateData === 'object' && updateData.type === 'editorjs' && updateData.blocks) {
-                console.log(`Using structured Editor.js blocks for ${updateType}`);
-                editorData = updateData.blocks;
+            if (typeof updateData === 'object' && updateData.type === 'editorjs') {
+                console.log(`Processing editorjs type update for ${updateType}`);
+                
+                // First check if we have proper blocks structure
+                if (updateData.blocks) {
+                    console.log(`Found blocks property for ${updateType}`, updateData.blocks);
+                    // Check if updateData.blocks is already in the correct format
+                    if (updateData.blocks && updateData.blocks.blocks && Array.isArray(updateData.blocks.blocks)) {
+                        // updateData.blocks is already { blocks: [...] }
+                        editorData = updateData.blocks;
+                    } else if (Array.isArray(updateData.blocks)) {
+                        // updateData.blocks is just the array
+                        editorData = { blocks: updateData.blocks };
+                    } else {
+                        console.error('Unexpected blocks structure:', updateData.blocks);
+                        editorData = { blocks: [] };
+                    }
+                } 
+                // If we have text field that looks like JSON, parse it
+                else if (updateData.text && typeof updateData.text === 'string' && updateData.text.trim().startsWith('{')) {
+                    console.log(`Attempting to parse text field as JSON for ${updateType}`);
+                    try {
+                        const parsed = JSON.parse(updateData.text.trim());
+                        if (parsed.blocks && Array.isArray(parsed.blocks)) {
+                            console.log(`Successfully parsed JSON from text field for ${updateType}`);
+                            editorData = parsed;
+                        } else {
+                            console.error('Parsed JSON does not have blocks array');
+                            editorData = { blocks: [] };
+                        }
+                    } catch (parseError) {
+                        console.error(`Failed to parse text as JSON for ${updateType}:`, parseError);
+                        // Fallback to showing raw text
+                        editorData = {
+                            blocks: [{
+                                type: 'paragraph',
+                                data: { text: updateData.text }
+                            }]
+                        };
+                    }
+                } else {
+                    console.error('EditorJS type but no valid blocks or text found');
+                    editorData = { blocks: [] };
+                }
             } else {
                 // Convert text to simple paragraph blocks
                 const text = typeof updateData === 'string' ? updateData : updateData?.text || 'No content available.';

@@ -1,0 +1,11 @@
+/* Legacy CSS imported from the original application */
+@import './css/core/variables.css';
+@import './css/core/base.css';
+@import './css/core/layout.css';
+@import './css/core/navigation.css';
+@import './css/components/cards.css';
+@import './css/pages/form.css';
+@import './css/pages/editor.css';
+@import './css/pages/updates.css';
+@import './css/pages/dashboard.css';
+@import './css/core/animations.css';

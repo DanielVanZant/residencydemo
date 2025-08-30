@@ -1,0 +1,309 @@
+/* Question Navigation Styles */
+.question-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    padding: var(--space-lg);
+    background: var(--bg-section);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.question-progress {
+    font-size: var(--text-lg);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+}
+
+.current-question {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--accent-primary);
+}
+
+.nav-buttons {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+/* Question Container Styles */
+.question-container {
+    display: none;
+    animation: fadeIn var(--transition-medium);
+}
+
+.question-container.active {
+    display: block;
+}
+
+.question-container .question-section,
+.question-container .north-star-section {
+    margin-bottom: var(--space-xl);
+}
+
+/* Dynamic Question Loading Styles */
+.dynamic-question-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-xl);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.dynamic-question-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-light);
+    border-top: 3px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--space-md);
+}
+
+.dynamic-question-loading p {
+    font-size: var(--text-base);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Dynamic question loaded state */
+.dynamic-question {
+    animation: slideUp var(--transition-medium);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Inline spinner for button loading states */
+.spinner-inline {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-light);
+    border-top: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Responsive navigation */
+@media (max-width: 768px) {
+    .question-navigation {
+        flex-direction: column;
+        gap: var(--space-md);
+        text-align: center;
+    }
+    
+    .nav-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .nav-buttons .btn {
+        flex: 1;
+        max-width: 120px;
+    }
+}
+
+/* Formatted Updates Section */
+.formatted-updates-section {
+    background: var(--bg-secondary);
+    padding: var(--space-xl) 0;
+    border-top: 1px solid var(--border-light);
+    display: none;
+}
+
+.formatted-updates-section.active {
+    display: block;
+}
+
+.updates-header {
+    margin-bottom: var(--space-xl);
+}
+
+.updates-header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.updates-header-text {
+    text-align: center;
+    flex: 1;
+}
+
+.updates-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.updates-subtitle {
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    margin: 0;
+}
+
+.updates-controls {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.formatted-updates-container {
+    display: grid;
+    gap: var(--space-lg);
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.formatted-update-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+}
+
+.update-header {
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: var(--space-sm);
+}
+
+.update-header h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.update-icon {
+    font-size: var(--text-xl);
+}
+
+.update-description {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin: 0;
+}
+
+.update-editor {
+    margin-bottom: var(--space-md);
+    min-height: 150px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm);
+    background: var(--bg-primary);
+}
+
+.update-editor .ce-block {
+    margin: var(--space-xs) 0;
+}
+
+.update-editor .ce-paragraph {
+    line-height: 1.6;
+    font-size: var(--text-base);
+}
+
+.update-editor .ce-header {
+    font-weight: var(--font-semibold);
+    margin: var(--space-sm) 0;
+}
+
+.update-editor .ce-header[data-level="2"] {
+    font-size: var(--text-lg);
+}
+
+.update-editor .ce-header[data-level="3"] {
+    font-size: var(--text-base);
+}
+
+.update-editor .cdx-list {
+    margin: var(--space-sm) 0;
+}
+
+.fallback-content {
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    font-size: var(--text-base);
+    padding: var(--space-sm);
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+}
+
+.update-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+}
+
+.update-actions .btn {
+    min-width: 100px;
+}
+
+.update-actions .btn.success {
+    background: var(--success-color);
+    color: white;
+}
+
+/* Simple loading indicator for formatted updates */
+.simple-loading {
+    text-align: center;
+    padding: var(--space-lg);
+    display: none;
+}
+
+.simple-loading.active {
+    display: block;
+}
+
+.simple-loading .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-light);
+    border-top: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    margin-right: var(--space-xs);
+    vertical-align: middle;
+}
+
+.simple-loading p {
+    display: inline-block;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    vertical-align: middle;
+}
+
+#updatesError {
+    text-align: center;
+    padding: var(--space-xl);
+    display: none;
+}
+
+#updatesError.active {
+    display: block;
+}
+
+/* Retry message styling */
+.retry-details {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+    font-family: monospace;
+    opacity: 0.8;
+}

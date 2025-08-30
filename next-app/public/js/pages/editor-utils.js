@@ -76,7 +76,7 @@ class EditorUtils {
     }
 
     // Display bullets from API response
-    async displayBullets(markdownOrHierarchy, privacyManager) {
+    async displayBullets(markdownOrHierarchy, privacyManager, skipAutoGenerate = false) {
         console.log('Raw response:', markdownOrHierarchy);
         
         // Check if we can use Editor.js with List tool
@@ -110,12 +110,16 @@ class EditorUtils {
                 blocks: blocks
             });
             
-            // Generate formatted updates after rendering with delay for API rate limiting
-            setTimeout(() => {
-                console.log('About to generate formatted updates with data:', markdownOrHierarchy);
-                console.log('Editor rendered, calling generateFormattedUpdates after delay...');
-                this.generateFormattedUpdates(markdownOrHierarchy);
-            }, 6000); // Wait 6 seconds to avoid API rate limiting issues
+            // Generate formatted updates after rendering with delay for API rate limiting (if not skipped)
+            if (!skipAutoGenerate) {
+                setTimeout(() => {
+                    console.log('About to generate formatted updates with data:', markdownOrHierarchy);
+                    console.log('Editor rendered, calling generateFormattedUpdates after delay...');
+                    this.generateFormattedUpdates(markdownOrHierarchy);
+                }, 6000); // Wait 6 seconds to avoid API rate limiting issues
+            } else {
+                console.log('Skipping auto-generation of formatted updates');
+            }
             
         } else {
             console.log('List tool not available, using fallback contenteditable');

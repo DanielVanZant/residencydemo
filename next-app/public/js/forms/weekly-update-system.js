@@ -208,6 +208,7 @@ class WeeklyUpdateApp {
     setupQuestionNavigation() {
         const prevButton = document.getElementById('prevQuestion');
         const nextButton = document.getElementById('nextQuestion');
+        const continueButton = document.getElementById('continueToEditing');
 
         if (prevButton) {
             prevButton.addEventListener('click', () => this.navigateQuestion(-1));
@@ -215,6 +216,10 @@ class WeeklyUpdateApp {
         
         if (nextButton) {
             nextButton.addEventListener('click', () => this.navigateQuestion(1));
+        }
+
+        if (continueButton) {
+            continueButton.addEventListener('click', () => this.continueToEditing());
         }
 
         // Initialize first question
@@ -284,6 +289,7 @@ class WeeklyUpdateApp {
     updateNavigationState() {
         const prevButton = document.getElementById('prevQuestion');
         const nextButton = document.getElementById('nextQuestion');
+        const continueButton = document.getElementById('continueToEditing');
         const currentQuestionSpan = document.querySelector('.current-question');
 
         // Update progress display
@@ -298,6 +304,18 @@ class WeeklyUpdateApp {
         
         if (nextButton) {
             nextButton.disabled = this.currentQuestion === this.totalQuestions;
+            // Hide next button and show continue button when on last question
+            if (this.currentQuestion === this.totalQuestions) {
+                nextButton.style.display = 'none';
+                if (continueButton) {
+                    continueButton.style.display = 'inline-block';
+                }
+            } else {
+                nextButton.style.display = 'inline-block';
+                if (continueButton) {
+                    continueButton.style.display = 'none';
+                }
+            }
         }
     }
 
@@ -339,7 +357,7 @@ class WeeklyUpdateApp {
             const result = await response.json();
             
             // Update the question elements
-            document.getElementById('dynamic-question-4-label').innerHTML = result.question;
+            document.getElementById('dynamic-question-4-label').textContent = result.question;
             document.getElementById('dynamic-question-4-hint').textContent = result.hint;
             document.getElementById('dynamic-question-4-input').placeholder = result.placeholder;
 
@@ -384,6 +402,16 @@ class WeeklyUpdateApp {
                 throw new Error('No username available');
             }
 
+            // Get current form responses to include with previous summaries
+            const formData = this.formManager.getFormData();
+            const currentResponses = {
+                accomplishments: formData.accomplishments || '',
+                challengesPriorities: formData['challenges-priorities'] || '',
+                northStarValue: formData.northStarValue || '',
+                northStarNote: formData.northStarNote || '',
+                dynamicFollowupDetail: formData['dynamic-followup-detail'] || ''
+            };
+
             const response = await fetch('/api/generate-dynamic-question', {
                 method: 'POST',
                 headers: {
@@ -391,7 +419,10 @@ class WeeklyUpdateApp {
                 },
                 body: JSON.stringify({
                     type: 'previous-followup',
-                    data: { username }
+                    data: { 
+                        username,
+                        currentResponses 
+                    }
                 })
             });
 
@@ -412,7 +443,7 @@ class WeeklyUpdateApp {
                 throw new Error('Question 5 DOM elements missing');
             }
             
-            labelEl.innerHTML = result.question;
+            labelEl.textContent = result.question;
             hintEl.textContent = result.hint;
             inputEl.placeholder = result.placeholder;
 
@@ -445,6 +476,123 @@ class WeeklyUpdateApp {
             // Hide loading state
             this.showNavigationLoading(false);
         }
+    }
+
+    // Create draft and continue to editing stage
+    async continueToEditing() {
+        // Get button reference and original text outside try block
+        const continueButton = document.getElementById('continueToEditing');
+        const originalText = continueButton.textContent;
+        
+        try {
+            console.log('Creating draft from question responses...');
+            
+            // Show loading state
+            continueButton.disabled = true;
+            continueButton.innerHTML = '<span class="spinner-inline"></span>Creating draft...';
+            
+            // Get form data and metadata
+            const { username, weekDate } = this.formManager.getSaveMetadata();
+            const formData = this.formManager.getFormData();
+            
+            // Prepare question responses
+            const questionResponses = {
+                northStarValue: formData.northStarValue || '',
+                northStarNote: formData.northStarNote || '',
+                accomplishments: formData.accomplishments || '',
+                'challenges-priorities': formData['challenges-priorities'] || '',
+                'dynamic-followup-detail': formData['dynamic-followup-detail'] || '',
+                'dynamic-followup-previous': formData['dynamic-followup-previous'] || ''
+            };
+            
+            // Create draft
+            const draftData = {
+                username: username,
+                weekDate: weekDate,
+                questionResponses: JSON.stringify(questionResponses),
+                dynamicQuestion4: document.getElementById('dynamic-question-4-label')?.textContent || null,
+                dynamicQuestion5: document.getElementById('dynamic-question-5-label')?.textContent || null,
+                northStarValue: formData.northStarValue,
+                northStarNote: formData.northStarNote,
+                stage: 'editing'
+            };
+            
+            console.log('Creating draft with data:', draftData);
+            
+            const response = await fetch('/api/drafts/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(draftData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('Draft created:', result);
+            console.log('Draft ID:', result.draftId);
+            
+            // Clear auto-saved form data since we're moving to the next stage
+            this.formManager.clearAutoSavedData();
+            
+            // Trigger background generation of initial content (don't wait for it)
+            console.log('About to trigger initial content generation for draft:', result.draftId);
+            this.generateInitialContent(result.draftId);
+            
+            // Small delay to ensure the background request is initiated before redirect
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Redirect to draft editing page
+            console.log('Redirecting to draft page...');
+            window.location.href = `/draft/${result.draftId}`;
+            
+        } catch (error) {
+            console.error('Error creating draft:', error);
+            
+            // Restore button state
+            const continueButton = document.getElementById('continueToEditing');
+            continueButton.disabled = false;
+            continueButton.textContent = originalText;
+            
+            // Show error
+            window.uiUtils.showError(`Failed to create draft: ${error.message}`);
+        }
+    }
+
+    // Generate initial bullets and formatted updates in the background
+    generateInitialContent(draftId) {
+        console.log('Triggering background generation of initial content for draft:', draftId);
+        
+        // Use sendBeacon for guaranteed delivery even if page navigates
+        const url = `/api/drafts/${draftId}/generate-initial`;
+        
+        // Try sendBeacon first (survives page navigation)
+        if (navigator.sendBeacon) {
+            const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+            const sent = navigator.sendBeacon(url, blob);
+            console.log('Beacon sent for initial content generation:', sent);
+            
+            if (sent) {
+                return;
+            }
+        }
+        
+        // Fallback to fetch with keepalive
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}),
+            keepalive: true  // This helps the request survive navigation
+        }).then(response => {
+            console.log('Initial content generation response:', response.ok);
+        }).catch(error => {
+            console.warn('Error generating initial content:', error);
+        });
     }
 
     setupEventListeners() {

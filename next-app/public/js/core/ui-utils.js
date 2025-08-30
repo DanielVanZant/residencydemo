@@ -44,11 +44,14 @@ class UIUtils {
             successDiv.id = 'submitSuccessMessage';
             successDiv.className = 'submit-success-message';
             
-            // Insert in the submit container, after the button
+            // Insert in the submit container
             const submitContainer = document.querySelector('.submit-container');
-            const submitButton = submitContainer.querySelector('button');
-            if (submitContainer && submitButton) {
-                submitContainer.insertBefore(successDiv, submitButton.nextSibling);
+            if (submitContainer) {
+                // Simply append to the container
+                submitContainer.appendChild(successDiv);
+            } else {
+                // Fallback: append to body if container not found
+                document.body.appendChild(successDiv);
             }
         }
         

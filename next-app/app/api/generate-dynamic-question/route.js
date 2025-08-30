@@ -2,7 +2,7 @@ import AnthropicClient from '../../lib/anthropic-client.js';
 
 // Configure route for long-running requests
 export const runtime = 'nodejs';
-export const maxDuration = 60; // 1 minute timeout
+export const maxDuration = 180; // 3 minute timeout to allow for AI processing
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
@@ -28,37 +28,22 @@ export async function POST(request) {
             
             if (!result.ok) {
                 const errorData = await result.json().catch(() => ({}));
-                console.error('Failed to generate detail followup question:', errorData);
+                console.error(`Anthropic API returned status ${result.status}:`, errorData);
+                console.error('Response headers:', Object.fromEntries(result.headers));
                 return Response.json({ 
-                    error: errorData.error?.message || `API request failed: ${result.status}` 
+                    error: errorData.error?.message || `API request failed: ${result.status}`,
+                    anthropic_status: result.status,
+                    anthropic_error: errorData
                 }, { status: result.status });
             }
             
             const responseData = await result.json();
-            const content = responseData.content[0].text;
+            const content = responseData.content[0].text.trim();
             
-            // Try to parse as JSON, handling markdown code blocks
-            try {
-                let cleanContent = content;
-                // Remove markdown code block wrapper if present
-                if (content.startsWith('```json') && content.endsWith('```')) {
-                    cleanContent = content.slice(7, -3).trim(); // Remove ```json and ```
-                } else if (content.startsWith('```') && content.endsWith('```')) {
-                    cleanContent = content.slice(3, -3).trim(); // Remove ``` and ```
-                }
-                
-                const parsed = JSON.parse(cleanContent);
-                question = parsed.question;
-                hint = parsed.hint;
-                placeholder = parsed.placeholder;
-            } catch (e) {
-                console.log('Question 4 JSON parse failed:', e.message);
-                console.log('Raw content was:', content);
-                // Fallback if not JSON
-                question = content;
-                hint = 'Please provide more details about this topic.';
-                placeholder = 'Share more context, specifics, or background...';
-            }
+            // Simple text response - no JSON parsing needed
+            question = content;
+            hint = 'Please provide more details about this topic.';
+            placeholder = 'Share more context, specifics, or background...';
             
         } else if (type === 'previous-followup') {
             // Question 5: Followup from previous summaries
@@ -66,38 +51,23 @@ export async function POST(request) {
             
             if (!result.ok) {
                 const errorData = await result.json().catch(() => ({}));
+                console.error(`Anthropic API returned status ${result.status}:`, errorData);
+                console.error('Response headers:', Object.fromEntries(result.headers));
                 return Response.json({ 
-                    error: errorData.error?.message || `API request failed: ${result.status}` 
+                    error: errorData.error?.message || `API request failed: ${result.status}`,
+                    anthropic_status: result.status,
+                    anthropic_error: errorData
                 }, { status: result.status });
             }
             
             const responseData = await result.json();
-            const content = responseData.content[0].text;
-            console.log('Question 5 raw Claude response:', content);
+            const content = responseData.content[0].text.trim();
+            console.log('Question 5 response:', content);
             
-            // Try to parse as JSON, handling markdown code blocks
-            try {
-                let cleanContent = content;
-                // Remove markdown code block wrapper if present
-                if (content.startsWith('```json') && content.endsWith('```')) {
-                    cleanContent = content.slice(7, -3).trim(); // Remove ```json and ```
-                } else if (content.startsWith('```') && content.endsWith('```')) {
-                    cleanContent = content.slice(3, -3).trim(); // Remove ``` and ```
-                }
-                
-                const parsed = JSON.parse(cleanContent);
-                console.log('Question 5 parsed JSON:', parsed);
-                question = parsed.question;
-                hint = parsed.hint;
-                placeholder = parsed.placeholder;
-            } catch (e) {
-                console.log('Question 5 JSON parse failed:', e.message);
-                console.log('Raw content was:', content);
-                // Fallback if not JSON
-                question = content;
-                hint = 'Please provide an update on this topic.';
-                placeholder = 'Share your progress, changes, or current status...';
-            }
+            // Simple text response - no JSON parsing needed
+            question = content;
+            hint = 'Please provide an update on this topic.';
+            placeholder = 'Share your progress, changes, or current status...';
             
         } else {
             return Response.json({ 

@@ -63,6 +63,7 @@ export default function WeeklyUpdatePage() {
                 <div className="nav-buttons">
                   <button type="button" className="btn btn-secondary" id="prevQuestion" disabled>Previous</button>
                   <button type="button" className="btn btn-secondary" id="nextQuestion">Next</button>
+                  <button type="button" className="btn btn-primary" id="continueToEditing" style={{display: 'none'}}>Continue to Editing</button>
                 </div>
               </div>
 
@@ -128,7 +129,7 @@ export default function WeeklyUpdatePage() {
                 </div>
               </div>
 
-              <div className="button-group">
+              <div className="button-group" style={{display: 'none'}}>
                 <button type="button" className="btn btn-primary" id="extractBullets">Extract Bullet Points</button>
               </div>
             </form>

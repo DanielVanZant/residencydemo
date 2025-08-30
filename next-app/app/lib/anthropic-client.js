@@ -15,9 +15,9 @@ class AnthropicClient {
             try {
                 console.log(`Attempting Claude API call (attempt ${attempt}/${maxRetries})`);
                 
-                // Add timeout to prevent hanging requests
+                // Add timeout to prevent hanging requests - increased for complex AI operations
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for complex content
                 
                 const response = await fetch(this.baseUrl, {
                     method: 'POST',
@@ -31,6 +31,9 @@ class AnthropicClient {
                 });
                 
                 clearTimeout(timeoutId);
+                
+                console.log(`Claude API response: status ${response.status}, ok: ${response.ok}`);
+                console.log('Response headers:', Object.fromEntries(response.headers));
                 
                 // If successful or non-retryable error, return immediately
                 if (response.ok || (response.status !== 429 && response.status !== 503 && response.status !== 500)) {
@@ -57,13 +60,19 @@ class AnthropicClient {
             } catch (error) {
                 console.error(`Network error on attempt ${attempt}:`, error.message);
                 
-                if (attempt === maxRetries) {
+                // Check if this is a timeout or network connectivity issue
+                const isRetryableError = error.code === 'ETIMEDOUT' || 
+                                       error.code === 'ECONNRESET' || 
+                                       error.message?.includes('fetch failed') ||
+                                       error.name === 'AbortError';
+                
+                if (attempt === maxRetries || !isRetryableError) {
                     throw error;
                 }
                 
-                // Wait before retrying network errors too
-                const delay = baseDelay * Math.pow(2, attempt - 1);
-                console.log(`Network error, retrying in ${delay}ms...`);
+                // Wait before retrying network errors - longer delays for network issues
+                const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+                console.log(`Network error, retrying in ${Math.round(delay)}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -113,7 +122,7 @@ Use your best judgment to pre-check items that seem appropriate for public shari
 Return as markdown checklist format.`;
 
         const requestBody = {
-            model: this.model,
+            model: this.model, // Use Claude Sonnet 4 for bullet extraction
             max_tokens: 2000,
             temperature: 0,
             system: systemPrompt,
@@ -258,11 +267,17 @@ Use markdown formatting. Stick strictly to facts from the updates provided.`;
             return editorData;
         }
         
-        if (!editorData || !editorData.blocks) {
+        // Handle case where editorData is already the blocks array
+        let blocks;
+        if (Array.isArray(editorData)) {
+            blocks = editorData;
+        } else if (editorData && editorData.blocks && Array.isArray(editorData.blocks)) {
+            blocks = editorData.blocks;
+        } else {
             return '';
         }
         
-        return editorData.blocks.map(block => {
+        return blocks.map(block => {
             switch (block.type) {
                 case 'header':
                     return block.data.text || '';
@@ -341,56 +356,31 @@ Use these block types: header (levels 2-3), paragraph, and list (unordered).`;
     async generateDetailFollowupQuestion(formData) {
         console.log('Generating detail followup question for:', formData);
         
-        const systemPrompt = `You are an expert at identifying the most important missing details that would make a weekly update more valuable and impactful.
+        const systemPrompt = `You are an expert at generating concise, specific follow-up questions for weekly updates.
 
-Your goal is to find the ONE most significant accomplishment, breakthrough, or challenge from the user's responses that needs more specific details to be properly understood and appreciated by readers.
+Analyze the user's responses and create ONE direct question asking for more details about their most significant accomplishment or challenge.
 
-Focus on:
-- Technical breakthroughs that need more explanation of HOW they work
-- Major accomplishments missing key metrics, impact, or process details  
-- Challenges missing specific obstacles, root causes, or attempted solutions
-- Anything that sounds impressive but lacks the details that would make it compelling
+Focus on asking for specifics like: metrics, technical details, root causes, process steps, or impact.
 
-Create a direct, specific question that extracts exactly what's missing. Avoid conversational fluff.
-
-Return your response as JSON with this exact structure:
-
-{
-  "question": "Direct question with <span class='emphasis'>emphasized</span> key words focusing on specifics",
-  "hint": "What specific details to include", 
-  "placeholder": "Example with concrete details..."
-}`;
+Return ONLY the question text - no JSON, no formatting, just a plain question.`;
 
         const accomplishments = formData.accomplishments || '';
         const challengesPriorities = formData.challengesPriorities || '';
         const northStar = formData.northStar || {};
 
-        const userPrompt = `Analyze these weekly update responses and identify the ONE item that needs more specific details to be properly understood:
+        const userPrompt = `Based on these responses, create a specific follow-up question asking for more details:
 
-ACCOMPLISHMENTS:
-${accomplishments}
+ACCOMPLISHMENTS: ${accomplishments}
 
-CHALLENGES AND PRIORITIES:
-${challengesPriorities}
+CHALLENGES: ${challengesPriorities}
 
-NORTH STAR (${northStar.value || 'Not specified'}):
-${northStar.note || 'No context provided'}
+NORTH STAR: ${northStar.note || 'No context'}
 
-Find the most significant item that sounds impressive or important but lacks crucial details like:
-- Specific numbers, metrics, or measurements
-- Technical explanation of how something works
-- Root causes of problems or obstacles
-- Process steps or methodology
-- Timeline or sequence of events
-- Impact or outcomes
-
-Create a direct question asking for the missing specifics that would make this item compelling in a weekly update.
-
-Return as JSON only.`;
+Return just the question text asking for the most important missing details.`;
 
         const requestBody = {
-            model: this.model,
-            max_tokens: 1000,
+            model: 'claude-3-5-haiku-20241022', // Use faster model for questions
+            max_tokens: 200, // Shorter response needed
             temperature: 0.7,
             system: systemPrompt,
             messages: [
@@ -408,25 +398,13 @@ Return as JSON only.`;
     async generatePreviousFollowupQuestion(data) {
         console.log('Generating previous followup question for:', data.username);
         
-        const systemPrompt = `You are an expert at identifying the most important ongoing threads from previous weekly updates that need status updates.
+        const systemPrompt = `You are an expert at creating follow-up questions based on previous weekly updates.
 
-Your goal is to find the ONE most significant ongoing situation from their previous summaries that would have natural progress or developments worth sharing in a weekly update.
+Analyze the user's previous summaries and create ONE specific question asking for a status update on their most important ongoing situation.
 
-Focus on:
-- Major ongoing projects or technical work that would have concrete progress
-- Personal or professional situations that would naturally evolve over time
-- Conflicts, challenges, or decisions that would have resolutions or developments
-- Health, financial, or relationship situations that would have updates
+Focus on projects, challenges, or situations that would naturally have progress or developments.
 
-Create a direct, specific question that asks for the current status. Avoid conversational fluff.
-
-Return your response as JSON with this exact structure:
-
-{
-  "question": "Direct question with <span class='emphasis'>emphasized</span> key words asking for current status",
-  "hint": "What specific updates or developments to share",
-  "placeholder": "Example with concrete status updates..."
-}`;
+Return ONLY the question text - no JSON, no formatting, just a plain question.`;
 
         // Get the user's previous summaries
         let userPrompt;
@@ -439,40 +417,52 @@ Return your response as JSON with this exact structure:
                 const summariesData = await summariesResponse.json();
                 console.log('Previous summaries data for Question 5:', summariesData);
                 
-                userPrompt = `Analyze these previous weekly update summaries and identify the ONE most important ongoing situation that needs a status update:
+                const currentResponses = data.currentResponses || {};
+                userPrompt = `Based on these previous summaries AND current week responses, create a specific status update question:
 
-PREVIOUS PUBLIC SUMMARY:
-${summariesData.public_summary || 'No previous public summary available'}
+PREVIOUS PUBLIC SUMMARY: ${summariesData.public_summary || 'No previous public summary available'}
 
-PREVIOUS PRIVATE NOTES:
-${summariesData.personal_summary || 'No previous private notes available'}
+PREVIOUS PRIVATE NOTES: ${summariesData.personal_summary || 'No previous private notes available'}
 
-Find the most significant ongoing thread that would naturally have developments or progress since these summaries were written. Focus on situations that would have concrete updates, resolutions, or status changes.
+THIS WEEK'S RESPONSES:
+- Accomplishments: ${currentResponses.accomplishments || 'None provided'}
+- Challenges: ${currentResponses.challengesPriorities || 'None provided'}  
+- North Star: ${currentResponses.northStarValue || 'Not set'} - ${currentResponses.northStarNote || 'No context'}
+- Follow-up Details: ${currentResponses.dynamicFollowupDetail || 'None provided'}
 
-Create a direct question asking for the current status of this specific situation. Reference the actual context from the summaries.
+Find something from the PREVIOUS summaries that would have natural progress or developments, but make sure it's NOT already covered in this week's responses. Ask for a status update on that specific ongoing situation.
 
-Return as JSON only.`;
+Return just the question text.`;
             } else {
-                // No previous data available
-                userPrompt = `Create a thoughtful followup question for ${data.username} about ongoing work or recent developments, since no previous weekly update data is available.
+                // No previous data available - use current responses to ask about other areas
+                const currentResponses = data.currentResponses || {};
+                userPrompt = `Based on these current responses, ask about something NOT already covered:
 
-The question should encourage them to share updates on important ongoing projects, goals, experiments, or initiatives that may not have been covered in their previous responses.
+THIS WEEK'S RESPONSES:
+- Accomplishments: ${currentResponses.accomplishments || 'None provided'}
+- Challenges: ${currentResponses.challengesPriorities || 'None provided'}
+- North Star: ${currentResponses.northStarValue || 'Not set'} - ${currentResponses.northStarNote || 'No context'}
 
-Return as JSON only.`;
+Ask about ongoing projects, goals, or initiatives not already mentioned in these responses.
+
+Return just the question text.`;
             }
         } catch (error) {
             console.warn('Could not fetch previous summaries:', error);
             // Fallback prompt
-            userPrompt = `Create a thoughtful followup question for ${data.username} about ongoing work or recent developments.
+            const currentResponses = data.currentResponses || {};
+            userPrompt = `Based on these current responses, ask about ongoing work not already covered:
 
-The question should encourage them to share updates on important ongoing projects, goals, experiments, or initiatives that may not have been covered in their previous responses.
+CURRENT RESPONSES: ${JSON.stringify(currentResponses)}
 
-Return as JSON only.`;
+Ask about important ongoing projects or goals not mentioned above.
+
+Return just the question text.`;
         }
 
         const requestBody = {
-            model: this.model,
-            max_tokens: 1000,
+            model: 'claude-3-5-haiku-20241022', // Use faster model for questions
+            max_tokens: 200, // Shorter response needed
             temperature: 0.7,
             system: systemPrompt,
             messages: [
