@@ -5,7 +5,7 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
 
 export async function GET(request, { params }) {
     try {
-        const { username } = params;
+        const { username } = await params;
         console.log(`API: Getting updates for user: ${username}`);
         
         const updates = await convex.query(api.weekly_updates.getUserUpdates, { username });

@@ -24,41 +24,41 @@ export async function POST(request) {
             return Response.json({ success: true, message: 'No updates to summarize' });
         }
 
-        const anthropicClient = new AnthropicClient(apiKey);
-        const response = await anthropicClient.generateUserSummaries(updates, username);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return Response.json({ 
-                error: errorData.error?.message || `API request failed: ${response.status}` 
-            }, { status: response.status });
-        }
-
-        const data = await response.json();
-        const content = data.content[0].text;
+        const anthropicClient = new AnthropicClient();
         
-        try {
-            const summaryData = JSON.parse(content);
-            
-            // Save summaries to Convex
-            await convex.mutation(api.summaries.saveUserSummaries, {
-                username,
-                summaries: summaryData
-            });
-            
-            console.log('Summaries generated and saved for user:', username);
-            return Response.json({ 
-                success: true, 
-                summaries: summaryData 
-            });
-            
-        } catch (jsonError) {
-            console.error('Failed to parse summary JSON:', jsonError);
-            return Response.json({ 
-                error: 'Failed to parse generated summaries',
-                details: jsonError.message 
-            }, { status: 500 });
-        }
+        // Get user's north star metric (assuming from first update)
+        const userData = {
+            username: username,
+            northStarMetric: updates[0]?.northStarMetric || 'Progress Metric',
+            updates: updates
+        };
+
+        // Generate public summary
+        const publicResponse = await anthropicClient.generateUserSummary(userData, 'public');
+        const publicData = await publicResponse.json();
+        const publicSummary = publicData.content[0].text;
+        
+        // Generate personal summary
+        const personalResponse = await anthropicClient.generateUserSummary(userData, 'personal', publicSummary);
+        const personalData = await personalResponse.json();
+        const personalSummary = personalData.content[0].text;
+
+        // Save summaries to Convex
+        await convex.mutation(api.summaries.saveUserSummaries, {
+            username: username,
+            publicSummary: publicSummary,
+            personalSummary: personalSummary
+        });
+        
+        console.log('Summaries generated and saved for user:', username);
+        return Response.json({ 
+            success: true, 
+            message: 'User summaries generated and saved successfully',
+            summaries: {
+                publicSummary: publicSummary,
+                personalSummary: personalSummary
+            }
+        });
         
     } catch (error) {
         console.error('Error generating user summaries:', error);

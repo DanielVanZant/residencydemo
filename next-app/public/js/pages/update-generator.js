@@ -7,6 +7,9 @@ class UpdateGenerator {
 
     // Generate both published and internal updates from checkbox data
     async generateBothUpdates(bulletData) {
+        // Show loading state in the formatted updates area
+        this.showUpdatesLoading();
+        
         const updates = {};
         
         try {
@@ -137,6 +140,19 @@ class UpdateGenerator {
         return '/api/generate-formatted-update';
     }
 
+
+    // Show loading state in formatted updates area
+    showUpdatesLoading() {
+        const container = document.getElementById('formattedUpdates');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="updates-loading">
+                <div class="spinner"></div>
+                <p>Generating formatted updates...</p>
+            </div>
+        `;
+    }
 
     // Display updates in UI
     displayUpdates(updates) {

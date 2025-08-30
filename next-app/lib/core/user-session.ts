@@ -94,7 +94,9 @@ export class UserSession {
       
       // Clear existing options (except the placeholder)
       while (userSelect.children.length > 1) {
-        userSelect.removeChild(userSelect.lastChild);
+        if (userSelect.lastChild) {
+          userSelect.removeChild(userSelect.lastChild);
+        }
       }
       
       // Add user options
