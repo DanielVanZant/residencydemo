@@ -188,9 +188,9 @@ export default function WeeklyUpdatePage() {
       <Script src="/js/core/user-session.js" strategy="afterInteractive" />
       <Script src="/js/core/api-client.js" strategy="afterInteractive" />
       <Script src="/js/pages/editor-utils.js" strategy="afterInteractive" />
-      <Script src="/js/pages/update-generator.js" strategy="afterInteractive" />
+      <Script src="/js/pages/update-generator.js?v=2.1" strategy="afterInteractive" />
       <Script src="/js/core/ui-utils.js" strategy="afterInteractive" />
-      <Script src="/js/forms/weekly-update-system.js" strategy="afterInteractive" />
+      <Script src="/js/forms/weekly-update-system.js?v=2.1" strategy="afterInteractive" />
       
       {/* Initialize components that may not have initialized due to DOMContentLoaded */}
       <Script id="init-components" strategy="afterInteractive">

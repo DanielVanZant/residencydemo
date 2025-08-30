@@ -1,6 +1,11 @@
 import AnthropicClient from '../../lib/anthropic-client.js';
 import { convertBulletDataToText } from '../../lib/data-converter.js';
 
+// Configure route for long-running requests
+export const runtime = 'nodejs';
+export const maxDuration = 120; // 2 minutes timeout
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
     console.log('API: Generate formatted update');
     try {

@@ -186,3 +186,12 @@
 #updatesError.active {
     display: block;
 }
+
+/* Retry message styling */
+.retry-details {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+    font-family: monospace;
+    opacity: 0.8;
+}

@@ -292,7 +292,7 @@ class WeeklyUpdateApp {
         }
     }
 
-    // Extract bullets from editor content
+    // Extract bullets from editor content with retry logic
     async extractBullets() {
         try {
             window.uiUtils.showLoading(true);
@@ -312,14 +312,12 @@ class WeeklyUpdateApp {
             }
 
             // Prepare request data (server expects formData wrapper)
-            // Include all form field content in addition to editor data
             const requestData = {
                 formData: {
                     rawUpdate: formData.rawUpdate || '',
                     editorData: editorData,
                     northStar: this.northStarManager.getCurrentValues(),
                     username: username,
-                    // Include all form textarea content
                     accomplishments: formData.accomplishments || '',
                     priorities: formData.priorities || '',
                     challenges: formData.challenges || '',
@@ -332,26 +330,8 @@ class WeeklyUpdateApp {
 
             console.log('Sending extract request:', requestData);
 
-            const response = await fetch('/api/extract-bullets', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                
-                // Handle 503 Service Unavailable specifically
-                if (response.status === 503) {
-                    throw new Error(errorData.error || 'The AI service is temporarily unavailable. Please wait a moment and try again.');
-                }
-                
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            // Call extract with retry logic
+            const data = await this.extractBulletsWithRetry(requestData);
             console.log('Extract response:', data);
             
             // Use the existing EditorUtils displayBullets function
@@ -387,6 +367,65 @@ class WeeklyUpdateApp {
             window.uiUtils.showError(`Error extracting bullets: ${error.message}`);
         } finally {
             window.uiUtils.showLoading(false);
+        }
+    }
+
+    // Extract bullets API call with server overload retry logic  
+    async extractBulletsWithRetry(requestData, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`Extract bullets attempt ${attempt}/${maxRetries}`);
+                
+                if (attempt > 1) {
+                    // Show retry message
+                    const delay = 3000 * attempt; // 3s, 6s, 9s delays
+                    window.uiUtils.showError(`Server overloaded. Retrying in ${Math.round(delay / 1000)} seconds... (${attempt}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    window.uiUtils.hideError();
+                    window.uiUtils.showLoading(true);
+                }
+
+                const response = await fetch('/api/extract-bullets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    
+                    // Check if this is a server overload (529) or rate limit (503)
+                    const isServerOverload = response.status === 529 || response.status === 503;
+                    
+                    if (!isServerOverload || attempt === maxRetries) {
+                        // Not retryable or final attempt
+                        if (response.status === 503) {
+                            throw new Error(errorData.error || 'The AI service is temporarily unavailable. Please wait a moment and try again.');
+                        }
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    console.log(`Server overload (${response.status}) on attempt ${attempt}, will retry...`);
+                    continue; // Retry this attempt
+                }
+
+                return await response.json();
+                
+            } catch (error) {
+                console.error(`Extract attempt ${attempt} failed:`, error);
+                
+                // Check if it's a network error that should be retried
+                const isNetworkError = error.message.includes('Failed to fetch') || 
+                                     error.message.includes('NetworkError');
+                
+                if (!isNetworkError || attempt === maxRetries) {
+                    throw error; // Not retryable or final attempt
+                }
+                
+                console.log(`Network error on attempt ${attempt}, will retry...`);
+            }
         }
     }
 
@@ -502,15 +541,125 @@ class WeeklyUpdateApp {
         }
     }
 
-    // Regenerate the formatted updates
+    // Regenerate the formatted updates from current bullet points
     async regenerateUpdates() {
         try {
-            // Re-extract bullets which should trigger update generation
-            await this.extractBullets();
+            console.log('Regenerating formatted updates from current bullet points...');
+            
+            // Don't clear bullets! Only clear formatted updates
+            await this.clearFormattedUpdatesOnly();
+            
+            // Get current bullet data from the editor (don't re-extract from form)
+            if (!window.bulletEditor) {
+                throw new Error('No bullet points available. Please extract bullets first.');
+            }
+            
+            const bulletData = await window.bulletEditor.save();
+            
+            if (!bulletData || !bulletData.blocks || bulletData.blocks.length === 0) {
+                throw new Error('No bullet points found. Please extract bullets first.');
+            }
+            
+            // Find the list block with the bullet data
+            const listBlock = bulletData.blocks.find(block => block.type === 'list');
+            if (!listBlock) {
+                throw new Error('No bullet list found. Please extract bullets first.');
+            }
+            
+            console.log('Found bullet data for regeneration:', listBlock.data);
+            
+            // Generate formatted updates from existing bullets
+            if (window.EditorUtils) {
+                const editorUtils = new window.EditorUtils();
+                await editorUtils.generateFormattedUpdates(listBlock.data);
+            } else {
+                throw new Error('Editor utilities not available');
+            }
+            
         } catch (error) {
             console.error('Error regenerating updates:', error);
             window.uiUtils.showError(`Error regenerating updates: ${error.message}`);
         }
+    }
+
+    // Clear existing bullets and formatted updates before regenerating
+    async clearExistingContent() {
+        // Hide bullets section
+        const bulletsSection = document.getElementById('bulletsSection');
+        if (bulletsSection) {
+            bulletsSection.classList.remove('active');
+        }
+
+        // Clear bullet editor if it exists
+        if (window.bulletEditor) {
+            try {
+                // Clear the editor completely and wait for it
+                await window.bulletEditor.clear();
+                console.log('Bullet editor cleared successfully');
+            } catch (error) {
+                console.log('Error clearing bullet editor, attempting to destroy and recreate');
+                try {
+                    window.bulletEditor.destroy();
+                    window.bulletEditor = null;
+                } catch (destroyError) {
+                    console.error('Error destroying bullet editor:', destroyError);
+                }
+            }
+        }
+        
+        // Also clear the DOM container directly as backup
+        const editorContainer = document.getElementById('editorjs');
+        if (editorContainer) {
+            editorContainer.innerHTML = '';
+        }
+
+        // Clear formatted updates section
+        const formattedSection = document.getElementById('formattedUpdatesSection');
+        if (formattedSection) {
+            formattedSection.classList.remove('active');
+        }
+
+        const formattedContainer = document.getElementById('formattedUpdates');
+        if (formattedContainer) {
+            formattedContainer.innerHTML = '';
+        }
+
+        // Clear update generator editors
+        if (window.updateGenerator && window.updateGenerator.updateEditors) {
+            window.updateGenerator.updateEditors = {};
+        }
+
+        // Hide submit section
+        const submitSection = document.getElementById('submitSection');
+        if (submitSection) {
+            submitSection.classList.remove('active');
+        }
+
+        console.log('Cleared existing content for regeneration');
+    }
+
+    // Clear only formatted updates (keep bullets intact for regeneration)
+    async clearFormattedUpdatesOnly() {
+        console.log('Clearing formatted updates only (preserving bullets)...');
+        
+        // Clear formatted updates section
+        const formattedSection = document.getElementById('formattedUpdatesSection');
+        if (formattedSection) {
+            formattedSection.classList.remove('active');
+        }
+
+        const formattedContainer = document.getElementById('formattedUpdates');
+        if (formattedContainer) {
+            formattedContainer.innerHTML = '';
+        }
+
+        // Clear update generator editors
+        if (window.updateGenerator && window.updateGenerator.updateEditors) {
+            window.updateGenerator.updateEditors = {};
+        }
+
+        // Don't hide submit section - user might want to save current bullets
+        console.log('Formatted updates cleared, bullets preserved');
     }
 }
 
@@ -521,6 +670,7 @@ window.WeeklyUpdateApp = WeeklyUpdateApp;
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('WeeklyUpdateApp v2.1 - Smart Regenerate (Preserves Bullets)');
     window.weeklyUpdateApp = new WeeklyUpdateApp();
     
     // Initialize UpdateGenerator for formatted updates

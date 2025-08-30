@@ -1,6 +1,11 @@
 import AnthropicClient from '@/app/lib/anthropic-client';
 import { convertMarkdownChecklistToEditorJS } from '@/app/lib/data-converter';
 
+// Configure route for long-running requests
+export const runtime = 'nodejs';
+export const maxDuration = 120; // 2 minutes timeout
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
     console.log('Received extract-bullets request');
     try {

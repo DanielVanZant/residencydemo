@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096 --max-http-header-size=32768' next dev --port 3001",
+    "dev:debug": "NODE_OPTIONS='--max-old-space-size=4096 --inspect' next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

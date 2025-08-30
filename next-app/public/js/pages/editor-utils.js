@@ -110,12 +110,12 @@ class EditorUtils {
                 blocks: blocks
             });
             
-            // Generate formatted updates after rendering
+            // Generate formatted updates after rendering with delay for API rate limiting
             setTimeout(() => {
                 console.log('About to generate formatted updates with data:', markdownOrHierarchy);
-                console.log('Editor rendered, calling generateFormattedUpdates...');
+                console.log('Editor rendered, calling generateFormattedUpdates after delay...');
                 this.generateFormattedUpdates(markdownOrHierarchy);
-            }, 500); // Wait for Editor.js to fully render
+            }, 6000); // Wait 6 seconds to avoid API rate limiting issues
             
         } else {
             console.log('List tool not available, using fallback contenteditable');
@@ -144,6 +144,11 @@ class EditorUtils {
         }
         
         document.getElementById('bulletsSection').classList.add('active');
+
+        // Show user that formatted updates will be generated after a delay
+        if (window.EditorjsList) {
+            this.showFormattedUpdatesPreparation();
+        }
     }
 
     // Generate formatted updates after bullets are displayed
@@ -230,6 +235,23 @@ class EditorUtils {
         } else {
             console.error('Submit section element not found');
         }
+    }
+
+    // Show preparation message for formatted updates
+    showFormattedUpdatesPreparation() {
+        const container = document.getElementById('formattedUpdates');
+        if (!container) return;
+
+        // Show the formatted updates section with preparation message
+        document.getElementById('formattedUpdatesSection').classList.add('active');
+        
+        container.innerHTML = `
+            <div class="updates-loading">
+                <div class="spinner"></div>
+                <p>Bullets extracted successfully!</p>
+                <p class="retry-details">Preparing formatted updates in 6 seconds to avoid API rate limits...</p>
+            </div>
+        `;
     }
 
     // Convert checklist items to individual checklist blocks

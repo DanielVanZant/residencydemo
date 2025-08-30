@@ -3,40 +3,83 @@ class UpdateGenerator {
     constructor() {
         // Store editor instances for access by save functionality
         this.updateEditors = {};
+        console.log('UpdateGenerator v2.1 initialized - 5-Second Sequential Processing with Retry Logic');
     }
 
     // Generate both published and internal updates from checkbox data
     async generateBothUpdates(bulletData) {
+        console.log('🔄 NEW SEQUENTIAL LOGIC: Starting sequential update generation with 5-second delay');
+        
         // Show loading state in the formatted updates area
         this.showUpdatesLoading();
         
         const updates = {};
         
+        // Always generate published first, then internal - never concurrent
         try {
             console.log('Generating published update...');
-            updates.published = await this.generateFormattedUpdate(bulletData, 'published');
+            this.showUpdateProgress('published', 1, 2);
+            updates.published = await this.generateFormattedUpdateWithRetry(bulletData, 'published');
             console.log('Published update generated successfully');
         } catch (error) {
             console.error('Failed to generate published update:', error);
             updates.published = {
                 type: 'text',
-                text: 'Unable to generate published update due to API error. Please try again.'
+                text: 'Unable to generate published update due to server error. Please try again.'
             };
         }
         
+        // Wait 5 seconds between API calls for server recovery (minimum safe delay)
+        console.log('Waiting 5 seconds before generating internal notes to ensure server stability...');
+        this.showUpdateProgress('internal', 2, 2, true);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
         try {
             console.log('Generating internal notes...');
-            updates.internal = await this.generateFormattedUpdate(bulletData, 'internal');
+            this.showUpdateProgress('internal', 2, 2);
+            updates.internal = await this.generateFormattedUpdateWithRetry(bulletData, 'internal');
             console.log('Internal notes generated successfully');
         } catch (error) {
             console.error('Failed to generate internal notes:', error);
             updates.internal = {
                 type: 'text',
-                text: 'Unable to generate internal notes due to API error. Please try again.'
+                text: 'Unable to generate internal notes due to server error. Please try again.'
             };
         }
         
         return updates;
+    }
+
+    // Generate formatted update with specific retry logic for server errors
+    async generateFormattedUpdateWithRetry(bulletData, updateType, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`Attempt ${attempt}/${maxRetries} to generate ${updateType} update`);
+                
+                if (attempt > 1) {
+                    // Show retry status
+                    const delay = 5000 * attempt; // 5s, 10s, 15s delays
+                    this.showRetryMessage(updateType, attempt, maxRetries, Math.round(delay / 1000));
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                
+                return await this.generateFormattedUpdate(bulletData, updateType);
+                
+            } catch (error) {
+                console.error(`Attempt ${attempt} failed for ${updateType}:`, error);
+                
+                // Check if it's a server overload (529) or network error
+                const isServerOverload = error.message.includes('529') || 
+                                       error.message.includes('Service Temporarily Unavailable') ||
+                                       error.message.includes('Failed to fetch');
+                
+                if (!isServerOverload || attempt === maxRetries) {
+                    throw error; // Not retryable or final attempt
+                }
+                
+                console.log(`Server overload detected for ${updateType}, will retry...`);
+            }
+        }
     }
 
     // API call with retry logic for overload errors
@@ -80,6 +123,10 @@ class UpdateGenerator {
                 // Wait before retrying (exponential backoff)
                 const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
                 console.log(`${updateType} update overloaded, retrying in ${Math.round(delay)}ms...`);
+                
+                // Update UI to show retry status
+                this.showRetryMessage(updateType, attempt, maxRetries, Math.round(delay / 1000));
+                
                 await new Promise(resolve => setTimeout(resolve, delay));
                 
             } catch (error) {
@@ -92,6 +139,10 @@ class UpdateGenerator {
                 // Wait before retrying network errors too
                 const delay = baseDelay * Math.pow(2, attempt - 1);
                 console.log(`Network error for ${updateType}, retrying in ${delay}ms...`);
+                
+                // Update UI to show retry status for network errors
+                this.showRetryMessage(updateType, attempt, maxRetries, Math.round(delay / 1000));
+                
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -150,6 +201,38 @@ class UpdateGenerator {
             <div class="updates-loading">
                 <div class="spinner"></div>
                 <p>Generating formatted updates...</p>
+            </div>
+        `;
+    }
+
+    // Show retry message during API overload retries
+    showRetryMessage(updateType, attempt, maxRetries, delaySeconds) {
+        const container = document.getElementById('formattedUpdates');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="updates-loading">
+                <div class="spinner"></div>
+                <p>API temporarily overloaded. Retrying ${updateType} update...</p>
+                <p class="retry-details">Attempt ${attempt}/${maxRetries} • Waiting ${delaySeconds}s</p>
+            </div>
+        `;
+    }
+
+    // Show progress during sequential update generation
+    showUpdateProgress(updateType, current, total, isWaiting = false) {
+        const container = document.getElementById('formattedUpdates');
+        if (!container) return;
+        
+        const waitingText = isWaiting ? 
+            `<p class="retry-details">Waiting 5 seconds to ensure server stability...</p>` : 
+            '';
+        
+        container.innerHTML = `
+            <div class="updates-loading">
+                <div class="spinner"></div>
+                <p>Generating ${updateType} update... (${current}/${total})</p>
+                ${waitingText}
             </div>
         `;
     }
@@ -253,7 +336,7 @@ class UpdateGenerator {
                 
                 // Try to parse text as JSON first (in case LLM returned raw JSON as text)
                 try {
-                    if (text.trim().startsWith('{') && text.includes('"blocks"')) {
+                    if (text.trim().startsWith('{') && (text.includes('"blocks"') || text.includes('"type":'))) {
                         console.log(`Attempting to parse raw JSON text for ${updateType}`);
                         const parsed = JSON.parse(text.trim());
                         if (parsed.blocks && Array.isArray(parsed.blocks)) {
@@ -265,6 +348,8 @@ class UpdateGenerator {
                     }
                 } catch (jsonParseError) {
                     console.log(`Raw JSON parsing failed for ${updateType}, continuing with text conversion`);
+                    console.log('JSON parse error:', jsonParseError);
+                    console.log('Text being parsed:', text.substring(0, 200) + '...');
                 }
                 
                 // Split text into paragraphs and create blocks
