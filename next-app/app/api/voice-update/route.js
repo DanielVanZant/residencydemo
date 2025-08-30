@@ -173,8 +173,7 @@ function storeTranscription(callSid, recordingSid, text) {
   transcriptions.get(callSid).set(recordingSid, text);
 }
 
-// Export for use in transcription webhook
-export { storeTranscription };
+// Note: storeTranscription function available within this module only
 
 // Process recordings and create draft
 async function processCallAndCreateDraft(callState) {
