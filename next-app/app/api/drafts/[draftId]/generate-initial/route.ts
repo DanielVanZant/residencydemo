@@ -50,7 +50,7 @@ export async function POST(
       const bulletContent = bulletResult.content[0].text;
       
       // Parse the markdown into Editor.js format
-      const editorBlock = {
+      const editorBlock: any = {
         type: 'list',
         data: {
           style: 'checklist',
@@ -70,7 +70,7 @@ export async function POST(
           const content = trimmed.substring(checked ? 6 : 4).trim();
           const indentLevel = Math.floor((line.length - trimmed.length) / 2);
           
-          const item = {
+          const item: any = {
             content: content,
             checked: checked,
             items: []
@@ -84,7 +84,7 @@ export async function POST(
           if (indentLevel > 0 && indentStack[indentLevel - 1]) {
             const parent = indentStack[indentLevel - 1];
             if (parent.length > 0) {
-              const lastItem = parent[parent.length - 1];
+              const lastItem: any = parent[parent.length - 1];
               if (!lastItem.items) lastItem.items = [];
               lastItem.items.push(item);
               indentStack[indentLevel] = lastItem.items;
@@ -107,10 +107,10 @@ export async function POST(
       console.log('Generating formatted updates from bullets...');
       
       // Filter checked and unchecked items for different privacy levels
-      const checkedItems = [];
-      const uncheckedItems = [];
+      const checkedItems: any[] = [];
+      const uncheckedItems: any[] = [];
       
-      function categorizeItems(items) {
+      const categorizeItems = (items: any[]) => {
         for (const item of items) {
           if (item.checked) {
             checkedItems.push(item);
@@ -121,18 +121,18 @@ export async function POST(
             categorizeItems(item.items);
           }
         }
-      }
+      };
       
       categorizeItems(editorBlock.data.items);
       
       // Generate published update from checked items
       let publishedUpdate = null;
       if (checkedItems.length > 0) {
-        const publishedBulletText = checkedItems.map(item => `- ${item.content}`).join('\n');
+        const publishedBulletText = checkedItems.map((item: any) => `- ${item.content}`).join('\n');
         const publishedResponse = await anthropicClient.generateFormattedUpdate(publishedBulletText, 'published');
         
-        if (publishedResponse.ok) {
-          const publishedResult = await publishedResponse.json();
+        if (publishedResponse?.ok) {
+          const publishedResult = await publishedResponse?.json();
           const publishedContent = publishedResult.content[0].text;
           
           // Try to parse as JSON - store exactly like the original
@@ -147,11 +147,11 @@ export async function POST(
       
       // Generate internal update from all items
       let internalUpdate = null;
-      const allBulletText = editorBlock.data.items.map(item => `- ${item.content}`).join('\n');
+      const allBulletText = editorBlock.data.items.map((item: any) => `- ${item.content}`).join('\n');
       const internalResponse = await anthropicClient.generateFormattedUpdate(allBulletText, 'internal');
       
-      if (internalResponse.ok) {
-        const internalResult = await internalResponse.json();
+      if (internalResponse?.ok) {
+        const internalResult = await internalResponse?.json();
         const internalContent = internalResult.content[0].text;
         
         // Try to parse as JSON - store exactly like the original
@@ -165,7 +165,7 @@ export async function POST(
       
       // Save formatted updates if we have them
       if (publishedUpdate || internalUpdate) {
-        const formattedUpdates = {};
+        const formattedUpdates: any = {};
         if (publishedUpdate) formattedUpdates.published = publishedUpdate;
         if (internalUpdate) formattedUpdates.internal = internalUpdate;
         

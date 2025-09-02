@@ -25,7 +25,7 @@ export default function VoiceTestPage() {
       } else {
         setStatus('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       setStatus('Error: ' + error.message);
     }
   };
