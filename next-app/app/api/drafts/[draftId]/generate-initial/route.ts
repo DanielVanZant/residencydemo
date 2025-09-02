@@ -43,10 +43,10 @@ export async function POST(
       const bulletResponse = await anthropicClient.extractBullets(formData);
       
       if (!bulletResponse?.ok) {
-        throw new Error(`Failed to extract bullets: ${bulletResponse.status}`);
+        throw new Error(`Failed to extract bullets: ${bulletResponse?.status}`);
       }
       
-      const bulletResult = await bulletResponse.json();
+      const bulletResult = await bulletResponse?.json();
       const bulletContent = bulletResult.content[0].text;
       
       // Parse the markdown into Editor.js format
